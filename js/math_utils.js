@@ -65,7 +65,17 @@ export function Transform3dBuilder(initialTransform) {
   this.lookTo = function(location, direction, up) {
     result = Mx4Util.multiply(result, Mx4Util.inverse( Mx4Util.lookTo(location, direction, up) ));
     return self;
-  }
+  };
+
+  this.inverse = function() {
+    result = Mx4Util.inverse(result);
+    return self;
+  };
+
+  this.transponse = function() {
+    result = Mx4Util.transponse(result);
+    return self;
+  };
 
 }
 
@@ -189,9 +199,9 @@ export const MxDefUtils = {
     return res;
   },
 
-  transpon: function(m) {
+  transponse: function(m) {
     var res = [...m];
-    this.transponMutable(res);
+    this.transponseMutable(res);
     return res;
   },
 
@@ -211,7 +221,7 @@ export const MxDefUtils = {
     }
   },
 
-  transponMutable: function(m) {
+  transponseMutable: function(m) {
     var size = this.getSize(m);
     var swp;
     for (var i = 0; i < size; i++) {
@@ -231,7 +241,7 @@ export const MxDefUtils = {
 
   inverse: function(m) {
     var det = this.det(m);
-    var mComp = this.transpon(this.algebrComplement(this.minor(m)));
+    var mComp = this.transponse(this.algebrComplement(this.minor(m)));
     this.multScalMutable(mComp, 1/det);
     return mComp;
   },
@@ -240,7 +250,7 @@ export const MxDefUtils = {
     var det = this.det(m);
     var res = this.minor(m);
     this.algebrComplementMutable(res);
-    this.transponMutable(res);
+    this.transponseMutable(res);
     this.multScalMutable(res, 1/det);
     return res;
   },
@@ -281,6 +291,13 @@ export const Mx2Util = {
     return [
       m[0], -m[2],
       -m[1], m[3]
+    ];
+  },
+
+  transponse: function(m) {
+    return [
+      m[0], m[2],
+      m[1], m[3]
     ];
   },
 
@@ -367,6 +384,14 @@ export const Mx3Util =  {
       m[0], -m[3], m[6],
       -m[1], m[4], -m[7],
       m[2], -m[5], m[8]
+    ];
+  },
+
+  transponse: function(m) {
+    return [
+      m[0], m[3], m[6],
+      m[1], m[4], m[7],
+      m[2], m[5], m[8]
     ];
   },
 
@@ -468,6 +493,15 @@ export const Mx4Util = {
       -m[1], m[5], -m[9], m[13],
       m[2], -m[6], m[10], -m[14],
       -m[3], m[7], -m[11], m[15]
+    ];
+  },
+
+  transponse: function(m) {
+    return [
+      m[0], m[4], m[8], m[12],
+      m[1], m[5], m[9], m[13],
+      m[2], m[6], m[10], m[14],
+      m[3], m[7], m[11], m[15]
     ];
   },
 
@@ -729,7 +763,7 @@ function inverseGen(n) {
     };
   }
 
-  r = MxDefUtils.transpon(r);
+  r = MxDefUtils.transponse(r);
   var res = '';
   for (var i = 0; i < n; i++) {
     for (var j = 0; j < n; j++) {

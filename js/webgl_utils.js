@@ -1,175 +1,64 @@
-import {Scene} from './scene.js'
-import {Vx3Utils, Mx4Util, Transform3dBuilder} from './math_utils.js'
+/**
+ * Created by valti on 26.03.2021.
+ */
 
-export function WglUtil(canvasEl){
+import {Ajax} from './libs/ajax.js'
 
-  var scene = new Scene();
+export const TYPE_DIFFUSE_COLORED = 'DIFFUSE_COLORED',
+  TYPE_SPECULAR_COLORED = 'SPECULAR_COLORED',
+  TYPE_DIFFUSE_MONO_COLOR = 'DIFFUSE_MONO_COLOR',
+  TYPE_SPECULAR_MONO_COLOR = 'SPECULAR_MONO_COLOR',
+  TYPE_TEXTURED = 'TEXTURED',
+  TYPE_HAVE_NORMALS = 'HAVE_NORMALS',
+  DIFFUSE_COLORE_SOURCE = 'DIFFUSE_COLORE_SOURCE',
+  SPECULAR_COLORE_SOURCE = 'SPECULAR_COLORE_SOURCE',
+  BRILLIANCE_SOURCE = 'BRILLIANCE_SOURCE',
+  RADIANCE_SOURCE = 'RADIANCE_SOURCE',
+  COLOR_SOURCE_MATERIAL = 'MATERIAL',
+  COLOR_SOURCE_VERTEX = 'VERTEX',
+  COLOR_SOURCE_TEXTURE = 'TEXTURE',
+  MODE = 'MODE',
+  MODE_2D = '2D',
+  MODE_3D = '3D',
+  MODE_3D_WITH_LIGHT = '3D_WITH_LIGHT'
+  ;
+  ;
 
-  this.getScene = function() {
-    return scene;
-  };
-
-
-  var gl = canvasEl.getContext("webgl");
-  if (!gl) {
-    throw new Error("WebGL is not supported!");
+const ParamsParser = {};
+ParamsParser[TYPE_DIFFUSE_COLORED] = (config) => { config.diffuseMonoColor = false; };
+ParamsParser[TYPE_DIFFUSE_MONO_COLOR] = (config) => { config.diffuseMonoColor = true; };
+ParamsParser[TYPE_SPECULAR_COLORED] = (config) => { config.specularMonoColor = false; };
+ParamsParser[TYPE_SPECULAR_MONO_COLOR] = (config) => { config.specularMonoColor = true; };
+ParamsParser[TYPE_TEXTURED] = (config) => { config.texture = true; };
+ParamsParser[TYPE_HAVE_NORMALS] = (config) => { config.normals = true; };
+ParamsParser[MODE_2D] = (config) => { config.mode_2d = true; };
+ParamsParser[MODE_3D] = (config) => { config.mode_2d = false; };
+ParamsParser[DIFFUSE_COLORE_SOURCE] = (paramValue) => { return config => { config.diffuseColorSource = paramValue; } };
+ParamsParser[SPECULAR_COLORE_SOURCE] = (paramValue) => { return config => { config.specularColorSource = paramValue; } };
+ParamsParser[BRILLIANCE_SOURCE] = (paramValue) => { return config => { config.brillianceSource = paramValue; } };
+ParamsParser[RADIANCE_SOURCE] = (paramValue) => { return config => { config.radianceSource = paramValue; } };
+ParamsParser[MODE] = (paramValue) => { return config => { config.mode = paramValue; } };
+ParamsParser.getParser = function(param) {
+  if (typeof ParamsParser[param] == 'function') {
+    return ParamsParser[param];
   }
-
-  var programs = {};
-  var textures = {};
-  var framebuffers = [];
-
-  function createShader(type, source) {
-    var shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-    if (success) {
-      return shader;
-    }
-    gl.deleteShader(shader);
-    throw new Error("Shader compilation error!");
-  };
-
-  function createGLProgram(vertexShader, fragmentShader) {
-    var program = gl.createProgram();
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-    var success = gl.getProgramParameter(program, gl.LINK_STATUS);
-    if (success) {
-      return program;
-    }
-    gl.deleteProgram(program);
-    throw new Error("Error creating program!")
-  };
-
-  function createProgram(geometry) {
-    var vertexShaderName = geometry.vertexShaderName,
-      fragmentShaderName = geometry.fragmentShaderName,
-      vertexShaderParams = geometry.vertexShaderParams,
-      fragmentShaderParams = geometry.fragmentShaderParams;
-    var programName = vertexShaderName + '__' + vertexShaderParams + '.' + fragmentShaderName + '__' + fragmentShaderParams;
-    if (programs[programName] == null) {
-      var vertexShaderData = new shadersDataMap[vertexShaderName](vertexShaderParams),
-        fragmentShaderData = new shadersDataMap[fragmentShaderName](fragmentShaderParams),
-        vertexShader = createShader(gl.VERTEX_SHADER, vertexShaderData.getBody()),
-        fragmentShader = createShader(gl.FRAGMENT_SHADER, fragmentShaderData.getBody()),
-        newProgram = {
-          program: createGLProgram(vertexShader, fragmentShader)
-        };
-      if (typeof vertexShaderData.init == 'function') {
-        vertexShaderData.init(newProgram, geometry);
-      }
-      if (typeof fragmentShaderData.init == 'function') {
-        fragmentShaderData.init(newProgram, geometry);
-      }
-      if (typeof vertexShaderData.bindMethods == 'function') {
-        vertexShaderData.bindMethods(newProgram);
-      }
-      if (typeof fragmentShaderData.bindMethods == 'function') {
-        fragmentShaderData.bindMethods(newProgram);
-      }
-      programs[programName] = newProgram;
-    }
-    if (typeof programs[programName].initBuffers == 'function') {
-      programs[programName].initBuffers(geometry);
-    }
-    return programs[programName];
+  let pair = param.split('=');
+  if (pair.length == 2 && typeof ParamsParser[pair[0]] == 'function') {
+    return ParamsParser[pair[0]](pair[1]);
   }
+};
 
-  function createTexture() {
-    var texture = gl.createTexture();
-    //gl.activeTexture(gl.TEXTURE0 + index);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    return texture;
+export function parseParams (params) {
+  if (params == '') {
+    return {};
   }
+  var config = {};
+  params.split(',').forEach( param => { ParamsParser.getParser(param)(config) } );
+  return config;
+}
 
-  this.initTexture = function (name, image) {
-    var texture = createTexture();
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-    textures[name] = texture;
-  };
-
-  this.initGeometry = function(geometry) {
-    geometry.program = createProgram(geometry);
-  };
-
-  this.initFrameBuffer = function(name, width, height) {
-    var texture = createTexture();
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    textures[name] = texture;
-    var frameBuffer = gl.createFramebuffer();
-    framebuffers[name] = frameBuffer;
-    frameBuffer.width = width;
-    frameBuffer.height = height;
-    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-  };
-
-  var currentSize = {};
-
-  this.render = function(clearColor, geometries, frameBurrerName) {
-    if (frameBurrerName == null) {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      resize(gl.canvas);
-      currentSize.width = gl.canvas.width;
-      currentSize.height = gl.canvas.height;
-    } else {
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[frameBurrerName]);
-      currentSize.width = framebuffers[frameBurrerName].width;
-      currentSize.height = framebuffers[frameBurrerName].height;
-    }
-    gl.viewport(0, 0, currentSize.width, currentSize.height);
-    gl.clearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    for (var i in geometries) {
-      var geometry = geometries[i];
-      if (geometry.cullFace == 'CCW') {
-        gl.enable(gl.CULL_FACE);
-        gl.cullFace(gl.BACK);
-      } else if (geometry.cullFace == 'CW') {
-        gl.enable(gl.CULL_FACE);
-        gl.cullFace(gl.FRONT);
-      } else {
-        gl.disable(gl.CULL_FACE);
-      }
-      if (geometry.depthTestEnabled) {
-        gl.enable(gl.DEPTH_TEST);
-      } else {
-        gl.disable(gl.DEPTH_TEST);
-      }
-      gl.useProgram(geometry.program.program);
-      geometry.program.setBuffers(geometry);
-      if (typeof geometry.program.setTextures == 'function') {
-        geometry.program.setTextures(geometry);
-      }
-      if (typeof geometry.program.fillFragmUniforms == 'function') {
-        geometry.program.fillFragmUniforms(geometry);
-      }
-      if (typeof geometry.program.fillVertUniforms == 'function') {
-        geometry.program.fillVertUniforms(geometry);
-      }
-      gl.drawArrays(gl[geometry.primitiveType], geometry.offset, geometry.vertCount);
-    }
-  };
-
-  function resize(canvas) {
-    var height = canvas.clientHeight * window.devicePixelRatio,
-      width = canvas.clientWidth * window.devicePixelRatio;
-    if (canvas.width  != width || canvas.height != height) {
-      canvas.width  = width;
-      canvas.height = height;
-    }
-  }
-
-
-  var dataTypes = {
+function DataTypes(gl) {
+  return {
     float: {
       arrType: Float32Array,
       itemType: gl.FLOAT
@@ -198,280 +87,338 @@ export function WglUtil(canvasEl){
       arrType: Int32Array,
       itemType: gl.INT
     }
-  };
+  }
+}
 
-  var shadersDataMap = {};
+export function BufferUtils (gl, program) {
 
-  shadersDataMap.FS_MONO_COLOR = function()  {
-    this.getBody = function() {
-      return `
-        precision mediump float;
-        uniform vec4 u_color;
-        void main() {
-          gl_FragColor = u_color;
-        }`;
-    };
+  const dataTypes = new DataTypes(gl),
+    attributeLocations = {};
 
-    var colorUniformLocation;
+  function createBuffer(bufferData, arrayType, bufferUseType) {
+    var result = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, result);
+    gl.bufferData(gl.ARRAY_BUFFER, new arrayType(bufferData), gl[bufferUseType]);
+    return result;
+  }
 
-    this.init = function(programWrapper, geometry) {
-      colorUniformLocation = gl.getUniformLocation(programWrapper.program, 'u_color');
-    };
-
-    this.bindMethods = function(programWrapper) {
-      programWrapper.fillFragmUniforms = function(geometry) {
-        var color = geometry.getColor();
-        gl.uniform4f(colorUniformLocation, color.r, color.g,  color.b, color.a);
+  return {
+    createBufferWrapper: function(bufferData) {
+      var dataType = dataTypes[bufferData.type];
+      bufferData.bufferWrapper = {
+        buffer: createBuffer(bufferData.data, dataType.arrType, bufferData.bufferUseType),
+        type: dataType.itemType
       };
-    };
-  };
+    },
 
-  shadersDataMap.FS_TEXTURED = function()  {
-    this.getBody = function() {
-      return `
-        precision mediump float;
-        uniform sampler2D u_texture;
-        varying vec2 v_texture_position;
-        void main() {
-          gl_FragColor = texture2D(u_texture, v_texture_position);
-        }`;
-    };
+    setBuffer: function(attributeShaderVar, bufferData) {
+      let attribureLocation = attributeLocations[attributeShaderVar.name],
+        componentsCount = attributeShaderVar.componentsCount != null ?
+          attributeShaderVar.componentsCount : attributeShaderVar.type.componentsCount;
+      gl.enableVertexAttribArray(attribureLocation);
+      gl.bindBuffer(gl.ARRAY_BUFFER, bufferData.bufferWrapper.buffer);
+      gl.vertexAttribPointer(attribureLocation, componentsCount, bufferData.bufferWrapper.type, bufferData.normalized, 0, 0);
+    },
 
-    var textureUniformLocation;
+    initAttribute: function(attributeShaderVar) {
+      attributeLocations[attributeShaderVar.name] = gl.getAttribLocation(program, attributeShaderVar.name);
+    }
+  }
+}
 
-    this.init = function(programWrapper, geometry) {
-      textureUniformLocation = gl.getUniformLocation(programWrapper.program, 'u_texture');
-    };
+export function UniformAccessor(gl, program) {
 
-    this.bindMethods = function(programWrapper) {
-      programWrapper.fillFragmUniforms = function(geometry) {
-        gl.bindTexture(gl.TEXTURE_2D, textures[geometry.textureName]);
-      };
-    };
-  };
+  var uniformLocations = {};
 
-  shadersDataMap.FS_VERTEX_COLOR = function(params)  {
-    params = params != null ? params.split(',') : null;
-    var normalsMode = params != null ? params[0] : null;
-    this.getBody = function() {
-      var result = `
-        precision mediump float;
-        varying vec4 v_color;`;
-      if (normalsMode == TYPE_HAVE_NORMALS) {
-        result += `
-        varying vec3 v_normal;
-        uniform vec3 u_reverseLightDirection;`;
-      }
-      result += `
-        void main() {
-          gl_FragColor = v_color;`;
-      if (normalsMode == TYPE_HAVE_NORMALS) {
-        result += `
-          vec3 normal = normalize(v_normal);
-          float light = dot(normal, u_reverseLightDirection);
-          gl_FragColor.rgb *= light;`;
-      }
-      result += `
-        }`;
-      return result;
-    };
+  function getFullName(shaderVar, arrayPosition) {
+    if (arrayPosition == null) {
+      return shaderVar.name;
+    } else {
+      return shaderVar.name + '[' + arrayPosition + ']';
+    }
+  }
 
-    var reverseLightDirectionUniformLocation;
+  function setFullQualifiedVar(varFullName, type, value) {
+    if (type.matrix) {
+      gl['uniformMatrix' + type.fnSuffix + 'v'](uniformLocations[varFullName], false, value);
+    } else {
+      var vector = value instanceof Array;
+      gl['uniform' + type.fnSuffix + (vector ? 'v' : '')](uniformLocations[varFullName], value);
+    }
+  }
 
-    this.init = function(programWrapper, geometry) {
-      if (normalsMode == TYPE_HAVE_NORMALS) {
-        reverseLightDirectionUniformLocation = gl.getUniformLocation(programWrapper.program, 'u_reverseLightDirection');
-      }
-    };
-
-    this.bindMethods = function(programWrapper) {
-      programWrapper.fillFragmUniforms = function(geometry) {
-        if (normalsMode == TYPE_HAVE_NORMALS) {
-          gl.uniform3fv(reverseLightDirectionUniformLocation, scene.getReversedLightDirection());
-        }
-      };
-    };
-  };
-
-  const TYPE_COLORED = 'COLORED',
-    TYPE_TEXTURED = 'TEXTURED',
-    TYPE_HAVE_NORMALS = 'HAVE_NORMALS',
-    TYPE_TEXTURED_FLAT = 'TYPE_TEXTURED_FLAT',
-    MODE_2D = '2D',
-    MODE_3D = '3D';
-
-  shadersDataMap.VS_TRANSFORM = function(params) {
-    params = params.split(',');
-    var mode = params[0],
-      type = params[1],
-      normalsMode = params[2];
-
-    this.getBody = function() {
-      var result;
-      if (mode == MODE_2D) {
-        result =  `
-        attribute vec2 a_position;
-        uniform mat3 u_wvp_matrix;`;
+  return {
+    initUniform: function(shaderVar, arrayPosition) {
+      let fullName = getFullName(shaderVar, arrayPosition);
+      let components = shaderVar.type.components;
+      if (components == null) {
+        uniformLocations[fullName] = gl.getUniformLocation(program, fullName);
       } else {
-        result =  `
-        attribute vec4 a_position;
-        uniform mat4 u_wvp_matrix;`;
-        if (normalsMode == TYPE_HAVE_NORMALS) {
-          result += `
-        attribute vec3 a_normal;
-        varying vec3 v_normal;
-        uniform mat4 u_world_matrix;`;
+        for (let i in components) {
+          let componentName = fullName + '.' + components[i].name;
+          uniformLocations[componentName] = gl.getUniformLocation(program, componentName);
         }
       }
-      if (type == TYPE_COLORED) {
-        result += `
-        attribute vec4 a_color;
-        varying vec4 v_color;`;
-      } else if (type == TYPE_TEXTURED) {
-        result += `
-        attribute vec2 a_texture_position;
-        varying vec2 v_texture_position;`;
-      } else if (type == TYPE_TEXTURED_FLAT) {
-        result += `
-        varying vec2 v_texture_position;
-        uniform vec2 u_texture_scale;`;
-      }
-      result += `
-        void main() {`;
-      if (mode == MODE_2D) {
-        result += `
-            gl_Position = vec4((u_wvp_matrix * vec3(a_position, 1)).xy, 0, 1);`
+    },
+    setUniform: function(shaderVar, value, arrayPosition) {
+      let fullName = getFullName(shaderVar, arrayPosition);
+      let components = shaderVar.type.components;
+      if (components == null) {
+        setFullQualifiedVar(fullName, shaderVar.type, value);
       } else {
-        result += `
-            gl_Position = u_wvp_matrix * a_position;`
-        if (normalsMode == TYPE_HAVE_NORMALS) {
-          result += `
-        v_normal = a_normal;
-        v_normal = mat3(u_world_matrix) * a_normal;`;
+        for (let i in components) {
+          let
+            component = components[i],
+            componentName = fullName + '.' + component.name,
+            componentType = component.type,
+            componentValue = value.get(component);
+          setFullQualifiedVar(componentName, componentType, componentValue);
         }
       }
-      if (type == TYPE_COLORED) {
-        result += `
-            v_color = a_color;`;
-      } else if (type == TYPE_TEXTURED) {
-        result += `
-            v_texture_position = a_texture_position;`;
-      } else if (type == TYPE_TEXTURED_FLAT) {
-        result += `
-            v_texture_position = a_position * u_texture_scale;`;
-      }
-      result += `
-        }`;
-      return result;
-    };
-
-    var positionAttributeLocation;
-    var colorAttributeLocation;
-    var texturePositionsAttributeLocation;
-    var normalsAttributeLocation;
-    var textureScaleUniformLocation;
-    var wvpTransformUniformLocation;
-    var worldTransformUniformLocation;
-
-    this.init = function(programWrapper, geometry) {
-      positionAttributeLocation = gl.getAttribLocation(programWrapper.program, 'a_position');
-      wvpTransformUniformLocation = gl.getUniformLocation(programWrapper.program, 'u_wvp_matrix');
-      if (type == TYPE_COLORED) {
-        colorAttributeLocation = gl.getAttribLocation(programWrapper.program, 'a_color');
-      } else if (type == TYPE_TEXTURED) {
-        texturePositionsAttributeLocation = gl.getAttribLocation(programWrapper.program, 'a_texture_position');
-      } else if (type == TYPE_TEXTURED_FLAT) {
-        textureScaleUniformLocation = gl.getUniformLocation(programWrapper.program, 'u_texture_scale');
-      }
-      if (mode == MODE_3D && normalsMode == TYPE_HAVE_NORMALS) {
-        normalsAttributeLocation = gl.getAttribLocation(programWrapper.program, 'a_normal');
-        worldTransformUniformLocation = gl.getUniformLocation(programWrapper.program, 'u_world_matrix');
-      }
-    };
-
-    this.bindMethods = function(programWrapper) {
-      programWrapper.initBuffers = function(geometry) {
-        if (geometry.combinedBuffer) {
-
-        } else {
-          geometry.positionsBuffer = createBufferWrapper(geometry.positions);
-          if (type == TYPE_COLORED) {
-            geometry.colorsBuffer = createBufferWrapper(geometry.colors);
-          } else if (type == TYPE_TEXTURED) {
-            geometry.texturePositionsBuffer = createBufferWrapper(geometry.texturePositions);
-          }
-          if (mode == MODE_3D && normalsMode == TYPE_HAVE_NORMALS) {
-            geometry.normalsBuffer = createBufferWrapper(geometry.normals)
-          }
+    },
+    setStructsUniforms: function(structs, shaderVar, valuesExtractor, nullValuesExtractor) {
+      if (structs.length > 0) {
+        for (let i = 0; i < structs.length; i++) {
+          let valuesMap = valuesExtractor(structs[i]);
+          this.setUniform(shaderVar, valuesMap, i);
         }
-      };
-
-      function createBufferWrapper(bufferData) {
-        var dataType = dataTypes[bufferData.type];
-        return {
-          buffer: createBuffer(bufferData.data, dataType.arrType, bufferData.bufferUseType),
-          type: dataType.itemType
-        };
+      } else {
+        let valuesMap = nullValuesExtractor(null);
+        this.setUniform(shaderVar, valuesMap, 0);
       }
-
-      function createBuffer(bufferData, arrayType, bufferUseType) {
-        var result = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, result);
-        gl.bufferData(gl.ARRAY_BUFFER, new arrayType(bufferData), gl[bufferUseType]);
-        return result;
-      };
-
-
-      programWrapper.setBuffers = function(geometry) {
-        if (geometry.combinedBuffer) {
-
-        } else {
-          setBuffer(positionAttributeLocation, geometry.positionsBuffer, geometry.positions, mode == MODE_2D ? 2 : 3);
-          if (type == TYPE_COLORED) {
-            setBuffer(colorAttributeLocation, geometry.colorsBuffer, geometry.colors, 4);
-          } else if (type == TYPE_TEXTURED) {
-            setBuffer(texturePositionsAttributeLocation, geometry.texturePositionsBuffer, geometry.texturePositions, 2);
-          }
-          if (mode == MODE_3D && normalsMode == TYPE_HAVE_NORMALS) {
-            setBuffer(normalsAttributeLocation, geometry.normalsBuffer, geometry.normals, 3);
-          }
+    },
+    getValuesExtractor: function () {
+      let args = arguments;
+      return function (struct) {
+        let values = new Map();
+        for (let i = 1; i < args.length; i += 2) {
+          values.set(args[i - 1], args[i](struct));
         }
-      };
-
-      function setBuffer(attribureLocation, bufferWrapper, bufferData, componentsCount) {
-        gl.enableVertexAttribArray(attribureLocation);
-        gl.bindBuffer(gl.ARRAY_BUFFER, bufferWrapper.buffer);
-        gl.vertexAttribPointer(attribureLocation, componentsCount, bufferWrapper.type, bufferData.normalized, 0, 0);
+        return values;
       }
-
-      programWrapper.fillVertUniforms = function(geometry) {
-        var worldMatrix = geometry.getWorldTransform();
-        if (worldMatrix == null) {
-          if (mode == MODE_2D) {
-            worldMatrix = Mx3Util.IDENT;
-          } else {
-            worldMatrix = Mx4Util.IDENT;
-          }
-        }
-        if (mode == MODE_2D) {
-          gl.uniformMatrix3fv(wvpTransformUniformLocation, false, worldMatrix);
-        } else {
-          worldMatrix = new Transform3dBuilder(worldMatrix);
-          if (normalsMode == TYPE_HAVE_NORMALS) {
-            gl.uniformMatrix4fv(worldTransformUniformLocation, false, worldMatrix.build());
-          }
-          gl.uniformMatrix4fv(wvpTransformUniformLocation, false,
-            worldMatrix.multiply(scene.getVPBuilder().build()).build()
-          );
-
-        }
-        if (type == TYPE_TEXTURED_FLAT) {
-          gl.uniform2fv(wvpTransformUniformLocation, geometry.textureScaleVec);
-        }
-      };
-
-    };
+    }
   };
 
+}
 
+export const ShaderVarKind = {
+  uniform: 'uniform',
+  attribute: 'attribute',
+  varying: 'varying'
 };
+
+export const UniformTypes = {
+  float: {
+    name: 'float',
+    fnSuffix: '1f',
+    componentsCount: 1
+  },
+  vec2: {
+    name: 'vec2',
+    fnSuffix: '2f',
+    componentsCount: 2
+  },
+  vec3: {
+    name: 'vec3',
+    fnSuffix: '3f',
+    componentsCount: 3
+  },
+  vec4: {
+    name: 'vec4',
+    fnSuffix: '4f',
+    componentsCount: 4
+  },
+  int: {
+    name: 'int',
+    fnSuffix: '1i',
+    componentsCount: 1
+  },
+  ivec2: {
+    name: 'ivec2',
+    fnSuffix: '2i',
+    componentsCount: 2
+  },
+  ivec3: {
+    name: 'ivec3',
+    fnSuffix: '3i',
+    componentsCount: 3
+  },
+  ivec4: {
+    name: 'ivec4',
+    fnSuffix: '4i',
+    componentsCount: 4
+  },
+  sampler2D: {
+    name: 'sampler2D',
+    fnSuffix: '1i'
+  },
+  samplerCube : {
+    name: 'samplerCube ',
+    fnSuffix: '1i'
+  },
+  mat3: {
+    name: 'mat3',
+    fnSuffix: '3f',
+    matrix: true
+  },
+  mat4: {
+    name: 'mat4',
+    fnSuffix: '4f',
+    matrix: true
+  },
+};
+
+export const ComplexTypes = {
+  DirectLight: {
+    name: 'DirectLight',
+    components: {
+      directionRev : {
+        name: 'directionRev',
+        type: UniformTypes.vec3
+      },
+      luminousIntensity : {
+        name: 'luminousIntensity',
+        type: UniformTypes.vec3
+      }
+    }
+  },
+  PointLight: {
+    name: 'PointLight',
+    components: {
+      position : {
+        name: 'position',
+        type: UniformTypes.vec3
+      },
+      luminousIntensity : {
+        name: 'luminousIntensity',
+        type: UniformTypes.vec3
+      },
+      size : {
+        name: 'size',
+        type: UniformTypes.float
+      }
+
+    }
+  }
+};
+
+export function ShaderBuilder() {
+  var
+    structs = [],
+    declaredVars = new Set(),
+    arrayDeclaresVars = new Map(),
+    instructions = '',
+    precisionDeclaration = '',
+    definitions = '',
+    includeSubShadersUrls = [];
+
+  this.getVars = () => Array.from(declaredVars);
+  this.getArrVars = () => Array.from(arrayDeclaresVars.entries());
+
+  this.build = function() {
+    var structsDeclarations = structs.map(struct => 'struct ' + struct.name + ' {\n' +
+    Object.values(struct.components).map(comp => '\t' + comp.type.name + ' ' + comp.name + ';\n').join('') + '};\n')
+      .join('');
+    var declarations = Array.from(declaredVars)
+      .map(varDef => varDef.kind + ' ' + varDef.type.name + ' ' + varDef.name + ';\n')
+      .join('');
+    var arrayDeclarations = Array.from(arrayDeclaresVars.entries())
+      .map(([shaderVar, arraySize])=>shaderVar.kind + ' ' + shaderVar.type.name + ' ' + shaderVar.name +
+      '[' + arraySize + '];\n')
+      .join('');
+    if (includeSubShadersUrls.length == 0) {
+      return precisionDeclaration + '\n' +
+        definitions + '\n' +
+        structsDeclarations + '\n' +
+        arrayDeclarations + '\n' +
+        declarations + '\n\nvoid main() {\n' +
+        instructions + '\n}';
+    } else {
+      return Promise.all(includeSubShadersUrls.map(url => Ajax.get(url))).then(sources =>
+        precisionDeclaration + '\n' +
+        definitions + '\n' +
+        structsDeclarations + '\n' +
+        arrayDeclarations + '\n' +
+        declarations + '\n\n' +
+        sources.map(xhr => xhr.responseText).join('/n')  + '\n\nvoid main() {\n' +
+        instructions + '\n}' );
+    }
+  };
+
+  this.addDeclaration = function(shaderVar, arraySize) {
+    if (arraySize == null) {
+      declaredVars.add(shaderVar);
+    } else {
+      arrayDeclaresVars.set(shaderVar, arraySize);
+    }
+  };
+
+  this.addStruct = (struct) => { structs.push(struct) };
+
+  this.addDefinition = function() {
+    let line = '';
+    for (let i in arguments) {
+      let a = arguments[i];
+      if (line.length > 0) {
+        line += ' ';
+      }
+      line += a;
+    }
+    line += '\n';
+    definitions += line;
+  };
+
+  this.addIncludeSubShaderUrl = function(url) {
+    includeSubShadersUrls.push(url);
+  };
+
+  this.setPrecision = function(precision) {
+    precisionDeclaration = 'precision ' + precision + ' float;'
+  };
+
+  function stringify(value) {
+    if (value.name != null) {
+      if (arrayDeclaresVars.get(value) == null) {
+        declaredVars.add(value);
+      }
+      return value.name;
+    } else {
+      return value;
+    }
+  }
+
+  function createInstruction(args) {
+    let line = '\t';
+    for (let i in args) {
+      let a = args[i];
+      if (line.length > 1) {
+        line += ' ';
+      }
+      line += stringify(a);
+    }
+    return line;
+  }
+
+  this.createInstructionBuilder = function() {
+    var line = createInstruction(arguments),
+      result = {};
+    result.add = function() {
+      line += createInstruction(arguments);
+      return result;
+    };
+    result.addIf = function(condition) {
+      if (condition) {
+        line += createInstruction(arguments);
+      }
+      return result;
+    };
+    result.build = function() {
+      instructions += line + ';\n';
+    };
+    return result;
+  };
+
+  this.addInstruction = function() {
+    instructions += createInstruction(arguments) + ';\n';
+  };
+}

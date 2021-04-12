@@ -1,7 +1,7 @@
 
 import {Vx3Utils, Mx4Util, Transform3dBuilder} from './math_utils.js'
 
-export function Scene(){
+export function Scene(name){
 
   function notNull(value, name) {
     if (value == null) {
@@ -9,8 +9,8 @@ export function Scene(){
     }
   }
 
-  function Camera(location, direction, up) {
-    if (location == null) location = [0, 0, 0];
+  function Camera(position, direction, up) {
+    if (position == null) position = [0, 0, 0];
     if (up == null) up = [0, 1, 0];
     if (direction == null) direction = [0, 0, -1];
     setDirection(direction);
@@ -19,33 +19,23 @@ export function Scene(){
       direction = Vx3Utils.multiply(-1, newDirection);
     }
 
-    Object.defineProperty(this, 'location', {
-      get: function() {
-        return location;
-      },
-      set: function(newLocation) {
-        notNull(newLocation, 'camera location');
-        location = newLocation;
-      }
-    });
-    Object.defineProperty(this, 'up', {
-      get: function() {
-        return up;
-      },
-      set: function(newUp) {
-        notNull(newUp, 'camera up');
-        up = newUp;
-      }
-    });
-    Object.defineProperty(this, 'direction', {
-      get: function() {
-        return direction;
-      },
-      set: function(newDirection) {
-        notNull(newDirection, 'camera direction');
-        setDirection(newDirection);
-      }
-    });
+    this.getPosition = () => position;
+    this.setPosition = newPosition => {
+      notNull(newPosition, 'camera position');
+      position = newPosition;
+    };
+
+    this.getUp = () => up;
+    this.setUp = newUp => {
+      notNull(newUp, 'camera up');
+      up = newUp;
+    };
+
+    this.getDirection = () => direction;
+    this.setDirection = newDirection => {
+      notNull(newDirection, 'camera direction');
+      setDirection(newDirection);
+    };
   }
 
   function Projection(near, far, fieldOfViewVerticalRadians, aspect) {
@@ -91,14 +81,78 @@ export function Scene(){
       }
     });
   }
-  var reversedLightDirection = [0, 0, 1];
-  var camera = new Camera();
-  var projection = new Projection();
-  var rightHandledWorld = true;
+
+  this.DirectLight = function(direction, luminousIntensity) {
+    var reversedDirection;
+    if (direction == null) direction = [0, 0, -1];
+    if (luminousIntensity == null) luminousIntensity = [1, 1, 1];
+    setRevDirection(direction);
+
+    function setRevDirection(value) {
+      reversedDirection = Vx3Utils.normalize(Vx3Utils.multiply(-1, value));
+    }
+
+    this.setDirection = (value) => {
+      notNull(value, 'direct light reversedDirection');
+      setRevDirection(value);
+    };
+    this.getRevDirection = () => reversedDirection;
+
+    this.setLuminousIntensity = (value) => {
+      notNull(value, 'direct light luminousIntensity');
+      luminousIntensity = value;
+    };
+    this.getLuminousIntensity = () => luminousIntensity;
+
+  };
+
+  this.PointLight = function(position, luminousIntensity, size) {
+    if (position == null) position = [0, 0, 0];
+    if (luminousIntensity == null) luminousIntensity = [1, 1, 1];
+    if (size == null) size = 1;
+    setSize(size);
+
+    function setSize(value) {
+      notNull(value, 'point light size');
+      if (value <= 0) {
+        throw Error('Cannot set ' + name + ' to not positive value!');
+      }
+      size = value;
+    }
+
+    this.setPosition = (value) => {
+      notNull(value, 'point light position');
+      position = value;
+    };
+    this.getPosition = () => position;
+
+    this.setLuminousIntensity = (value) => {
+      notNull(value, 'point light luminousIntensity');
+      luminousIntensity = value;
+    };
+    this.getLuminousIntensity = () => luminousIntensity;
+
+    this.setSize = (value) => {
+      setSize(value)
+    };
+    this.getSize = () => size;
+
+  };
+
+  var directLights = [],
+    pointLights = [],
+    camera = new Camera(),
+    projection = new Projection(),
+    rightHandledWorld = true,
+    clearColor = [1, 1, 1, 1],
+    ambientLight = [0, 0, 0],
+    lightSensitivityCfnt = [1, 1, 1];
+
+  this.getName = () => name;
 
   this.getVPBuilder = function() {
     var result = new Transform3dBuilder();
-    result.lookTo(camera.location, camera.direction, camera.up);
+    result.lookTo(camera.getPosition(), camera.getDirection(), camera.getUp());
     if (rightHandledWorld) {
       result.multiply(Mx4Util.IDENT_INVERSE_Z);
     }
@@ -106,22 +160,24 @@ export function Scene(){
     return result;
   };
 
-  this.setCamera = function(location, direction, up) {
-    camera.location = location;
-    camera.direction = direction;
-    camera.up = up;
+  this.getCamera = () => camera;
+
+  this.setCamera = function(position, direction, up) {
+    camera.setPosition(position);
+    camera.setDirection(direction);
+    camera.setUp(up);
   };
 
-  this.updateCameraLocation = function(newValue) {
-    camera.location = newValue;
+  this.updateCameraPosition = function(newValue) {
+    camera.setPosition(newValue);
   };
 
   this.updateCameraDirection = function(newValue) {
-    camera.direction = newValue;
+    camera.setDirection(newValue);
   };
 
   this.updateCameraUp = function(newValue) {
-    camera.up = newValue;
+    camera.setUp(newValue);
   };
 
   this.setProjection = function(fieldOfViewVerticalRadians, aspect, near, far) {
@@ -135,14 +191,14 @@ export function Scene(){
     rightHandledWorld = value;
   };
 
-  this.setDirectLight = function(lightDirection) {
-    notNull(lightDirection, 'lightDirection');
-    reversedLightDirection = Vx3Utils.normalize(Vx3Utils.multiply(-1, lightDirection));
-  };
-
-  this.getReversedLightDirection = function() {
-    return reversedLightDirection;
-  };
-
-
+  this.getClearColor = () => clearColor;
+  this.setClearColor = (value) => {clearColor = value};
+  this.getDirectLights = () => directLights;
+  this.addDirectLight = (newDirectLight) => { directLights.push(newDirectLight) };
+  this.getPointLights = () => pointLights;
+  this.addPointLight = (pointLight) => { pointLights.push(pointLight) };
+  this.getAmbientLight = () => ambientLight;
+  this.setAmbientLight = (value) => {ambientLight = value};
+  this.getLightSensitivityCfnt = () => lightSensitivityCfnt;
+  this.setLightSensitivityCfnt = (value) => {lightSensitivityCfnt = value};
 }
