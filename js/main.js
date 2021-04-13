@@ -357,7 +357,7 @@ var geometry1 = {
     },
     getSpecularColor: () => { return {r: 1, g: 1, b: 1} },
     getBrilliance: () => 5,
-    getRadiance: () => [0.1, 0.4, 0.2]
+    getRadiance: () =>  { return {r: 0.1, g: 0.02, b: 0.04} },
   };
 
 function pm(geom, dx, dy, angle, sx, sy, project) {
