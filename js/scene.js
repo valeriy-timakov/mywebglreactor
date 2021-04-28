@@ -1,204 +1,131 @@
 
-import {Vx3Utils, Mx4Util, Transform3dBuilder} from './math_utils.js'
+import {notNull, DirectionReversedHolder, SizeHolder, PositionHolder, Nameable} from './utils.js'
 
-export function Scene(name){
 
-  function notNull(value, name) {
-    if (value == null) {
-      throw Error('Cannot set ' + name + ' to null!');
-    }
-  }
 
-  function Camera(position, direction, up) {
-    if (position == null) position = [0, 0, 0];
-    if (up == null) up = [0, 1, 0];
-    if (direction == null) direction = [0, 0, -1];
-    setDirection(direction);
+function Light(luminousIntensity) {
 
-    function setDirection(newDirection) {
-      direction = Vx3Utils.multiply(-1, newDirection);
-    }
+  if (luminousIntensity == null) luminousIntensity = [1, 1, 1];
+  var switchedOn = true;
+  const BLACK_COLOR = [0, 0, 0];
 
-    this.getPosition = () => position;
-    this.setPosition = newPosition => {
-      notNull(newPosition, 'camera position');
-      position = newPosition;
-    };
-
-    this.getUp = () => up;
-    this.setUp = newUp => {
-      notNull(newUp, 'camera up');
-      up = newUp;
-    };
-
-    this.getDirection = () => direction;
-    this.setDirection = newDirection => {
-      notNull(newDirection, 'camera direction');
-      setDirection(newDirection);
-    };
-  }
-
-  function Projection(near, far, fieldOfViewVerticalRadians, aspect) {
-    if (near == null) near = 0.5;
-    if (far == null) far = 200;
-    if (fieldOfViewVerticalRadians == null) fieldOfViewVerticalRadians = 1.1;
-    if (aspect == null) aspect = 1024 / 768;
-
-    Object.defineProperty(this, 'near', {
-      get: function() {
-        return near;
-      },
-      set: function(newNear) {
-        notNull(newNear, 'projection near');
-        near = newNear;
-      }
-    });
-    Object.defineProperty(this, 'far', {
-      get: function() {
-        return far;
-      },
-      set: function(newFar) {
-        notNull(newFar, 'projection far');
-        far = newFar;
-      }
-    });
-    Object.defineProperty(this, 'fieldOfViewVerticalRadians', {
-      get: function() {
-        return fieldOfViewVerticalRadians;
-      },
-      set: function(newFieldOfViewVerticalRadians) {
-        notNull(newFieldOfViewVerticalRadians, 'projection fieldOfViewVerticalRadians');
-        fieldOfViewVerticalRadians = newFieldOfViewVerticalRadians;
-      }
-    });
-    Object.defineProperty(this, 'aspect', {
-      get: function() {
-        return aspect;
-      },
-      set: function(newAspect) {
-        notNull(newAspect, 'projection aspect');
-        aspect = newAspect;
-      }
-    });
-  }
-
-  this.DirectLight = function(direction, luminousIntensity) {
-    var reversedDirection;
-    if (direction == null) direction = [0, 0, -1];
-    if (luminousIntensity == null) luminousIntensity = [1, 1, 1];
-    setRevDirection(direction);
-
-    function setRevDirection(value) {
-      reversedDirection = Vx3Utils.normalize(Vx3Utils.multiply(-1, value));
-    }
-
-    this.setDirection = (value) => {
-      notNull(value, 'direct light reversedDirection');
-      setRevDirection(value);
-    };
-    this.getRevDirection = () => reversedDirection;
-
-    this.setLuminousIntensity = (value) => {
-      notNull(value, 'direct light luminousIntensity');
-      luminousIntensity = value;
-    };
-    this.getLuminousIntensity = () => luminousIntensity;
-
+  this.setLuminousIntensity = (value) => {
+    notNull(value, 'direct light luminousIntensity');
+    luminousIntensity = value;
   };
 
-  this.PointLight = function(position, luminousIntensity, size) {
-    if (position == null) position = [0, 0, 0];
-    if (luminousIntensity == null) luminousIntensity = [1, 1, 1];
-    if (size == null) size = 1;
-    setSize(size);
+  this.getLuminousIntensity = () => switchedOn ? luminousIntensity : BLACK_COLOR;
 
-    function setSize(value) {
-      notNull(value, 'point light size');
-      if (value <= 0) {
-        throw Error('Cannot set ' + name + ' to not positive value!');
-      }
-      size = value;
+  this.switchOn = () => {switchedOn = true;};
+
+  this.switchOff = () => {switchedOn = false;};
+
+}
+
+function GraphicRepresentationHolder (graphicRepresentation, lightItem) {
+
+  setGraphicRepresentationValue(graphicRepresentation);
+
+  function setGraphicRepresentationValue(value) {
+    graphicRepresentation = value;
+    if (graphicRepresentation != null) {
+      graphicRepresentation.lightItem = lightItem;
     }
+  }
 
-    this.setPosition = (value) => {
-      notNull(value, 'point light position');
-      position = value;
-    };
-    this.getPosition = () => position;
+  this.getGraphicRepresentation = () => graphicRepresentation;
 
-    this.setLuminousIntensity = (value) => {
-      notNull(value, 'point light luminousIntensity');
-      luminousIntensity = value;
-    };
-    this.getLuminousIntensity = () => luminousIntensity;
-
-    this.setSize = (value) => {
-      setSize(value)
-    };
-    this.getSize = () => size;
-
+  this.setGraphicRepresentation = (value) => {
+    graphicRepresentation = value;
   };
+}
+
+
+function DirectLight(direction, luminousIntensity) {
+  Object.assign(this, new DirectionReversedHolder(direction));
+  Object.assign(this, new Light(luminousIntensity));
+}
+
+function PointLight(position, luminousIntensity, size, graphicRepresentation) {
+  var self = this;
+  Object.assign(this, new Light(luminousIntensity));
+  Object.assign(this, new SizeHolder(size));
+  Object.assign(this, new PositionHolder(position));
+  Object.assign(this, new GraphicRepresentationHolder(graphicRepresentation, self));
+
+}
+
+function Spotlight(position, luminousIntensity, size, direction, nearLimit, farLimit, smothMethod, graphicRepresentation) {
+  var self = this;
+  Object.assign(this, new PointLight(position, luminousIntensity, size));
+  Object.assign(this, new DirectionReversedHolder(direction));
+  Object.assign(this, new GraphicRepresentationHolder(graphicRepresentation, self));
+
+  this.getNearLimit = () => nearLimit;
+  this.setNearLimit = (value) => {
+    notNull(value, 'spot light nearLimit');
+    nearLimit = value;
+  };
+
+  this.getFarLimit = () => farLimit;
+  this.setFarLimit = (value) => {
+    notNull(value, 'spot light farLimit');
+    farLimit = value;
+  };
+
+  this.getSmothMethod = () => smothMethod;
+  this.setSmothMethod = (value) => {
+    notNull(value, 'spot light smothMethod');
+    smothMethod = value;
+  };
+
+}
+
+function Scene(name){
+
+  Object.assign(this, new Nameable(name));
 
   var directLights = [],
     pointLights = [],
-    camera = new Camera(),
-    projection = new Projection(),
-    rightHandledWorld = true,
+    spotLights = [],
     clearColor = [1, 1, 1, 1],
     ambientLight = [0, 0, 0],
-    lightSensitivityCfnt = [1, 1, 1];
-
-  this.getName = () => name;
-
-  this.getVPBuilder = function() {
-    var result = new Transform3dBuilder();
-    result.lookTo(camera.getPosition(), camera.getDirection(), camera.getUp());
-    if (rightHandledWorld) {
-      result.multiply(Mx4Util.IDENT_INVERSE_Z);
-    }
-    result.projectPersp(projection.fieldOfViewVerticalRadians, projection.aspect, projection.near, projection.far);
-    return result;
-  };
-
-  this.getCamera = () => camera;
-
-  this.setCamera = function(position, direction, up) {
-    camera.setPosition(position);
-    camera.setDirection(direction);
-    camera.setUp(up);
-  };
-
-  this.updateCameraPosition = function(newValue) {
-    camera.setPosition(newValue);
-  };
-
-  this.updateCameraDirection = function(newValue) {
-    camera.setDirection(newValue);
-  };
-
-  this.updateCameraUp = function(newValue) {
-    camera.setUp(newValue);
-  };
-
-  this.setProjection = function(fieldOfViewVerticalRadians, aspect, near, far) {
-    projection.aspect = aspect;
-    projection.fieldOfViewVerticalRadians = fieldOfViewVerticalRadians;
-    projection.near = near;
-    projection.far = far;
-  };
-
-  this.setRightHandledWorld = function(value) {
-    rightHandledWorld = value;
-  };
+    lightSensitivityCfnt = [1, 1, 1],
+    permanentGraphicalObjects = [];
 
   this.getClearColor = () => clearColor;
   this.setClearColor = (value) => {clearColor = value};
   this.getDirectLights = () => directLights;
-  this.addDirectLight = (newDirectLight) => { directLights.push(newDirectLight) };
   this.getPointLights = () => pointLights;
-  this.addPointLight = (pointLight) => { pointLights.push(pointLight) };
+  this.addLight = (light) => {
+    if (light instanceof DirectLight) {
+      directLights.push(light);
+    } else if (light instanceof PointLight) {
+      pointLights.push(light);
+    } else if (light instanceof Spotlight) {
+      spotLights.push(light);
+    } else {
+      throw new Error('Unknown ligth type! ' + light);
+    }
+
+  };
+  this.getSpotLights = () => spotLights;
   this.getAmbientLight = () => ambientLight;
   this.setAmbientLight = (value) => {ambientLight = value};
   this.getLightSensitivityCfnt = () => lightSensitivityCfnt;
-  this.setLightSensitivityCfnt = (value) => {lightSensitivityCfnt = value};
+  this.setLightSensitivityCfnt = (value) => { lightSensitivityCfnt = value };
+  this.addPermanentGraphicObject = (value) => { permanentGraphicalObjects.push(value) };
+  this.removePermanentGraphicObject = (value) => {
+    let pos = permanentGraphicalObjects.indexOf(value);
+    if (pos != -1) {
+      permanentGraphicalObjects.splice(pos, 1);
+    }
+  };
+  this.getPermanentGraphicsObjects = () => [...permanentGraphicalObjects];
 }
+
+
+
+export {
+  DirectLight, PointLight, Spotlight, Scene
+};

@@ -1,6 +1,4 @@
-/**
- * Created by valti on 26.03.2021.
- */
+"use strict";
 
 import {Ajax} from './libs/ajax.js'
 
@@ -21,7 +19,6 @@ export const TYPE_DIFFUSE_COLORED = 'DIFFUSE_COLORED',
   MODE_2D = '2D',
   MODE_3D = '3D',
   MODE_3D_WITH_LIGHT = '3D_WITH_LIGHT'
-  ;
   ;
 
 const ParamsParser = {};
@@ -95,18 +92,19 @@ export function BufferUtils (gl, program) {
   const dataTypes = new DataTypes(gl),
     attributeLocations = {};
 
-  function createBuffer(bufferData, arrayType, bufferUseType) {
-    var result = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, result);
-    gl.bufferData(gl.ARRAY_BUFFER, new arrayType(bufferData), gl[bufferUseType]);
-    return result;
-  }
-
   return {
-    createBufferWrapper: function(bufferData) {
+    createBufferWrapper: function(bufferData, bufferUseType) {
       var dataType = dataTypes[bufferData.type];
       bufferData.bufferWrapper = {
-        buffer: createBuffer(bufferData.data, dataType.arrType, bufferData.bufferUseType),
+        buffer: createBuffer(bufferData.data, dataType.arrType, bufferUseType, gl.ARRAY_BUFFER),
+        type: dataType.itemType
+      };
+    },
+
+    createIndexBufferWrapper: function(bufferData, bufferUseType) {
+      var dataType = dataTypes[bufferData.type];
+      bufferData.bufferWrapper = {
+        buffer: createBuffer(bufferData.data, dataType.arrType, bufferUseType, gl.ELEMENT_ARRAY_BUFFER),
         type: dataType.itemType
       };
     },
@@ -117,13 +115,27 @@ export function BufferUtils (gl, program) {
           attributeShaderVar.componentsCount : attributeShaderVar.type.componentsCount;
       gl.enableVertexAttribArray(attribureLocation);
       gl.bindBuffer(gl.ARRAY_BUFFER, bufferData.bufferWrapper.buffer);
-      gl.vertexAttribPointer(attribureLocation, componentsCount, bufferData.bufferWrapper.type, bufferData.normalized, 0, 0);
+      gl.vertexAttribPointer(attribureLocation, componentsCount, bufferData.bufferWrapper.type,
+        bufferData.normalized != null ? bufferData.normalized : false,
+        0, bufferData.offset != null ? bufferData.offset : 0);
+    },
+
+    setIndexBuffer: function(bufferData) {
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferData.bufferWrapper.buffer);
     },
 
     initAttribute: function(attributeShaderVar) {
       attributeLocations[attributeShaderVar.name] = gl.getAttribLocation(program, attributeShaderVar.name);
     }
   }
+
+  function createBuffer(bufferData, arrayType, bufferUseType, bufferKind) {
+    var result = gl.createBuffer();
+    gl.bindBuffer(bufferKind, result);
+    gl.bufferData(bufferKind, new arrayType(bufferData), gl[bufferUseType]);
+    return result;
+  }
+
 }
 
 export function UniformAccessor(gl, program) {
@@ -297,7 +309,39 @@ export const ComplexTypes = {
         name: 'size',
         type: UniformTypes.float
       }
-
+    }
+  },
+  Spotlight: {
+    name: 'Spotlight',
+    components: {
+      position : {
+        name: 'position',
+        type: UniformTypes.vec3
+      },
+      luminousIntensity : {
+        name: 'luminousIntensity',
+        type: UniformTypes.vec3
+      },
+      size : {
+        name: 'size',
+        type: UniformTypes.float
+      },
+      directionRev : {
+        name: 'directionRev',
+        type: UniformTypes.vec3
+      },
+      nearLimit : {
+        name: 'nearLimit',
+        type: UniformTypes.float
+      },
+      farLimit : {
+        name: 'farLimit',
+        type: UniformTypes.float
+      },
+      smothMethod : {
+        name: 'smothMethod',
+        type: UniformTypes.float
+      }
     }
   }
 };

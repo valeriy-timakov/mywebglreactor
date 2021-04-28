@@ -222,56 +222,64 @@ export function getBuilder(params, scene, driver) {
         bufferUtils.initAttribute(ShaderVars.a_specularTexturePosition)
       }
 
-      programWrapper.initBuffers = function (geometry) {
-        if (geometry.combinedBuffer) {
+      programWrapper.initBuffers = function (figure) {
+        if (figure.combinedBuffer) {
 
         } else {
-          bufferUtils.createBufferWrapper(geometry.positions);
+          bufferUtils.createBufferWrapper(figure.positions, figure.bufferUseType);
           if (config.diffuseColorSource == COLOR_SOURCE_VERTEX) {
-            bufferUtils.createBufferWrapper(geometry.diffuseColors);
+            bufferUtils.createBufferWrapper(figure.diffuseColors, figure.bufferUseType);
           } else if (config.diffuseColorSource == COLOR_SOURCE_TEXTURE) {
-            bufferUtils.createBufferWrapper(geometry.diffuseTexturePositions);
+            bufferUtils.createBufferWrapper(figure.diffuseTexturePositions, figure.bufferUseType);
           }
           if (config.specularColorSource == COLOR_SOURCE_VERTEX) {
-            bufferUtils.createBufferWrapper(geometry.specularColors);
+            bufferUtils.createBufferWrapper(figure.specularColors, figure.bufferUseType);
           } else if (config.specularColorSource == COLOR_SOURCE_TEXTURE) {
-            bufferUtils.createBufferWrapper(geometry.specularTexturePositions);
+            bufferUtils.createBufferWrapper(figure.specularTexturePositions, figure.bufferUseType);
           }
           if (config.mode == MODE_3D_WITH_LIGHT) {
-            bufferUtils.createBufferWrapper(geometry.normals)
+            bufferUtils.createBufferWrapper(figure.normals, figure.bufferUseType)
           }
+        }
+        if (figure.indexes != null) {
+          bufferUtils.createIndexBufferWrapper(figure.indexes, figure.bufferUseType);
         }
       };
 
-      programWrapper.setBuffers = function (geometry) {
-        if (geometry.combinedBuffer) {
+      programWrapper.setBuffers = function (figure) {
+        if (figure.combinedBuffer) {
 
         } else {
           if (config.mode == MODE_2D) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexPosition2, geometry.positions);
+            bufferUtils.setBuffer(ShaderVars.a_vertexPosition2, figure.positions);
           } else if (config.mode == MODE_3D || config.mode == MODE_3D_WITH_LIGHT) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexPosition4, geometry.positions);
+            bufferUtils.setBuffer(ShaderVars.a_vertexPosition4, figure.positions);
             if (config.mode == MODE_3D_WITH_LIGHT) {
-              bufferUtils.setBuffer(ShaderVars.a_vertexNormal, geometry.normals);
+              bufferUtils.setBuffer(ShaderVars.a_vertexNormal, figure.normals);
             }
           }
 
           if (config.diffuseColorSource == COLOR_SOURCE_VERTEX) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexDiffuseColor, geometry.diffuseColors);
+            bufferUtils.setBuffer(ShaderVars.a_vertexDiffuseColor, figure.diffuseColors);
           } else if (config.diffuseColorSource == COLOR_SOURCE_TEXTURE) {
-            bufferUtils.setBuffer(ShaderVars.a_diffuseTexturePosition, geometry.diffuseTexturePositions);
+            bufferUtils.setBuffer(ShaderVars.a_diffuseTexturePosition, figure.diffuseTexturePositions);
           }
 
           if (config.specularColorSource == COLOR_SOURCE_VERTEX) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexSpecularColor, geometry.specularColors);
+            bufferUtils.setBuffer(ShaderVars.a_vertexSpecularColor, figure.specularColors);
           } else if (config.specularColorSource == COLOR_SOURCE_TEXTURE) {
-            bufferUtils.setBuffer(ShaderVars.a_specularTexturePosition, geometry.specularTexturePositions);
+            bufferUtils.setBuffer(ShaderVars.a_specularTexturePosition, figure.specularTexturePositions);
           }
         }
+        if (figure.indexes != null) {
+          bufferUtils.setIndexBuffer(figure.indexes);
+          return figure.indexes.bufferWrapper.type;
+        }
+        return null;
       };
 
-      programWrapper.fillVertUniforms = function (geometry) {
-        var worldMatrix = geometry.getWorldTransform();
+      programWrapper.fillVertUniforms = function (figure, viewport) {
+        var worldMatrix = figure.getWorldTransform();
         if (worldMatrix == null) {
           if (config.mode == MODE_2D) {
             worldMatrix = Mx3Util.IDENT;
@@ -286,10 +294,10 @@ export function getBuilder(params, scene, driver) {
             uniformAccessor.setUniform(ShaderVars.u_worldMatrix, new Transform3dBuilder(worldMatrix).build());
             uniformAccessor.setUniform(ShaderVars.u_worldMatrixInvTransp,
               new Transform3dBuilder(worldMatrix).inverse().transponse().build());
-            uniformAccessor.setUniform(ShaderVars.u_cameraPosition, driver.getScene().getCamera().getPosition());
+            uniformAccessor.setUniform(ShaderVars.u_cameraPosition, viewport.getCamera().getPosition());
           }
           uniformAccessor.setUniform(ShaderVars.u_worldViewProjectionMatrix4,
-            new Transform3dBuilder(worldMatrix).multiply(driver.getScene().getVPBuilder().build()).build());
+            new Transform3dBuilder(worldMatrix).multiply(viewport.getVPBuilder().build()).build());
         }
       };
 

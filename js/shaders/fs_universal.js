@@ -1,3 +1,4 @@
+"use strict";
 
 import { parseParams, UniformTypes, UniformAccessor, ShaderVarKind, ComplexTypes,
   ShaderBuilder, COLOR_SOURCE_MATERIAL, COLOR_SOURCE_TEXTURE, COLOR_SOURCE_VERTEX, MODE_3D_WITH_LIGHT } from './../webgl_utils.js'
@@ -10,8 +11,8 @@ export function getBuilder(params, scene, driver) {
       name: 'u_materialDiffuseColor',
       type: UniformTypes.vec4,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        var color = geometry.getDiffuseColor();
+      set: (figure, uniformAccessor) => {
+        var color = figure.getDiffuseColor();
         uniformAccessor.setUniform(ShaderVars.u_materialDiffuseColor, [color.r, color.g, color.b, color.a]);
       }
     },
@@ -19,8 +20,8 @@ export function getBuilder(params, scene, driver) {
       name: 'u_materialSpecularColor',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        var color = geometry.getSpecularColor();
+      set: (figure, uniformAccessor) => {
+        var color = figure.getSpecularColor();
         uniformAccessor.setUniform(ShaderVars.u_materialSpecularColor, [color.r, color.g, color.b]);
       }
     },
@@ -28,17 +29,17 @@ export function getBuilder(params, scene, driver) {
       name: 'u_materialBrilliance',
       type: UniformTypes.float,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        var color = geometry.getBrilliance();
-        uniformAccessor.setUniform(ShaderVars.u_materialBrilliance, geometry.getBrilliance());
+      set: (figure, uniformAccessor) => {
+        var color = figure.getBrilliance();
+        uniformAccessor.setUniform(ShaderVars.u_materialBrilliance, figure.getBrilliance());
       }
     },
     u_materialRadiance: {
       name: 'u_materialRadiance',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        var color = geometry.getRadiance();
+      set: (figure, uniformAccessor) => {
+        var color = figure.getRadiance();
         uniformAccessor.setUniform(ShaderVars.u_materialRadiance, [color.r, color.g, color.b]);
       }
     },
@@ -46,24 +47,24 @@ export function getBuilder(params, scene, driver) {
       name: 'u_diffuseTexture',
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        driver.bindTexture(geometry.diffuseTextureName);
+      set: (figure, uniformAccessor) => {
+        driver.bindTexture(figure.diffuseTextureName);
       }
     },
     u_specularTexture: {
       name: 'u_specularTexture',
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        driver.bindTexture(geometry.specularTextureName);
+      set: (figure, uniformAccessor) => {
+        driver.bindTexture(figure.specularTextureName);
       }
     },
     u_brillianceTexture: {
       name: 'u_brillianceTexture',
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
-      set: (geometry) => {
-        driver.bindTexture(geometry.brillianceTextureName);
+      set: (figure) => {
+        driver.bindTexture(figure.brillianceTextureName);
 
       }
     },
@@ -71,8 +72,8 @@ export function getBuilder(params, scene, driver) {
       name: 'u_radianceTexture',
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        driver.bindTexture(geometry.radianceTextureName);
+      set: (figure, uniformAccessor) => {
+        driver.bindTexture(figure.radianceTextureName);
 
       }
     },
@@ -80,7 +81,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_directLights',
       type: ComplexTypes.DirectLight,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
+      set: (figure, uniformAccessor) => {
         uniformAccessor.setStructsUniforms(scene.getDirectLights(), ShaderVars.u_directLights,
           uniformAccessor.getValuesExtractor(
             ShaderVars.u_directLights.type.components.directionRev, light => light.getRevDirection(),
@@ -95,7 +96,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_pointLights',
       type: ComplexTypes.PointLight,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
+      set: (figure, uniformAccessor) => {
         uniformAccessor.setStructsUniforms(scene.getPointLights(), ShaderVars.u_pointLights,
           uniformAccessor.getValuesExtractor(
             ShaderVars.u_pointLights.type.components.position, light => light.getPosition(),
@@ -108,20 +109,45 @@ export function getBuilder(params, scene, driver) {
         );
       }
     },
+    u_spotLights: {
+      name: 'u_spotLights',
+      type: ComplexTypes.Spotlight,
+      kind: ShaderVarKind.uniform,
+      set: (figure, uniformAccessor) => {
+        uniformAccessor.setStructsUniforms(scene.getSpotLights(), ShaderVars.u_spotLights,
+          uniformAccessor.getValuesExtractor(
+            ShaderVars.u_spotLights.type.components.position, light => light.getPosition(),
+            ShaderVars.u_spotLights.type.components.luminousIntensity, light => light.getLuminousIntensity(),
+            ShaderVars.u_spotLights.type.components.size, light => light.getSize(),
+            ShaderVars.u_spotLights.type.components.directionRev, light => light.getRevDirection(),
+            ShaderVars.u_spotLights.type.components.nearLimit, light => light.getNearLimit(),
+            ShaderVars.u_spotLights.type.components.farLimit, light => light.getFarLimit(),
+            ShaderVars.u_spotLights.type.components.smothMethod, light => light.getSmothMethod()),
+          uniformAccessor.getValuesExtractor(
+            ShaderVars.u_spotLights.type.components.position, light => [0, 0, 0],
+            ShaderVars.u_spotLights.type.components.luminousIntensity, light => [0, 0, 0],
+            ShaderVars.u_spotLights.type.components.size, light => 1,
+            ShaderVars.u_spotLights.type.components.directionRev, light => [1, 0, 0],
+            ShaderVars.u_spotLights.type.components.nearLimit, light => 0,
+            ShaderVars.u_spotLights.type.components.farLimit, light => 0,
+            ShaderVars.u_spotLights.type.components.smothMethod, light => -1)
+        );
+      }
+    },
     u_ambientLight: {
       name: 'u_ambientLight',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        uniformAccessor.setUniform(ShaderVars.u_ambientLight, driver.getScene().getAmbientLight());
+      set: (figure, uniformAccessor) => {
+        uniformAccessor.setUniform(ShaderVars.u_ambientLight, scene.getAmbientLight());
       }
     },
     u_lightSensitivityCfnt: {
       name: 'u_lightSensitivityCfnt',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (geometry, uniformAccessor) => {
-        uniformAccessor.setUniform(ShaderVars.u_lightSensitivityCfnt, driver.getScene().getLightSensitivityCfnt());
+      set: (figure, uniformAccessor) => {
+        uniformAccessor.setUniform(ShaderVars.u_lightSensitivityCfnt, scene.getLightSensitivityCfnt());
       }
     },
     v_diffuseTexturePosition: {
@@ -181,6 +207,12 @@ export function getBuilder(params, scene, driver) {
     }
   };
 
+  const InterpolationType = {
+    ermit: 0,
+    linear: 1,
+    power: 2
+  };
+
 
   return function () {
     var config = parseParams(params || '');
@@ -236,18 +268,23 @@ export function getBuilder(params, scene, driver) {
 
         let directLightsCount = scene.getDirectLights().length > 0 ? scene.getDirectLights().length : 1;
         let pointLightsCount = scene.getPointLights().length > 0 ? scene.getPointLights().length : 1;
+        let spotLightsCount = scene.getSpotLights().length > 0 ? scene.getSpotLights().length : 1;
         res.addDefinition('#define DIRECT_LIGHTS_COUNT ', directLightsCount);
         res.addDefinition('#define POINT_LIGHTS_COUNT ', pointLightsCount);
+        res.addDefinition('#define SPOT_LIGHTS_COUNT ', spotLightsCount);
         res.addStruct(ComplexTypes.DirectLight);
         res.addStruct(ComplexTypes.PointLight);
+        res.addStruct(ComplexTypes.Spotlight);
 
         res.addIncludeSubShaderUrl('./js/shaders/light.fs');
         res.addDeclaration(v.u_directLights, directLightsCount);
         res.addDeclaration(v.u_pointLights, pointLightsCount);
+        res.addDeclaration(v.u_spotLights, spotLightsCount);
         res.addInstruction(
           'gl_FragColor.rgb = dirLight(', v.v_normal,
           ', ', v.u_directLights,
           ', ', v.u_pointLights,
+          ', ', v.u_spotLights,
           ', ', v.u_ambientLight,
           ', ', v.u_lightSensitivityCfnt,
           ', ', v.v_surfacePosition,
@@ -269,13 +306,13 @@ export function getBuilder(params, scene, driver) {
         .forEach(u => uniformAccessor.initUniform(u));
       shaderUniformsArrays.forEach(uData => {for (let i = 0; i < uData[1]; i++) uniformAccessor.initUniform(uData[0],i)});
 
-      programWrapper.fillFragmUniforms = function (geometry) {
+      programWrapper.fillFragmUniforms = function (figure) {
         shaderUniforms
           .filter(u => typeof u.set == 'function')
-          .forEach(u => u.set(geometry, uniformAccessor));
+          .forEach(u => u.set(figure, uniformAccessor));
         shaderUniformsArrays
           .filter(uData => typeof uData[0].set == 'function')
-          .forEach( uData =>  uData[0].set(geometry, uniformAccessor));
+          .forEach( uData =>  uData[0].set(figure, uniformAccessor));
       };
 
     };

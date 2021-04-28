@@ -241,13 +241,6 @@ export const MxDefUtils = {
 
   inverse: function(m) {
     var det = this.det(m);
-    var mComp = this.transponse(this.algebrComplement(this.minor(m)));
-    this.multScalMutable(mComp, 1/det);
-    return mComp;
-  },
-
-  inverse: function(m) {
-    var det = this.det(m);
     var res = this.minor(m);
     this.algebrComplementMutable(res);
     this.transponseMutable(res);
@@ -575,6 +568,27 @@ export const Mx4Util = {
     ];
   },
 
+  axisRotation: function (axisDirection, angle) {
+    let x = axisDirection[0],
+      y = axisDirection[1],
+      z = axisDirection[2],
+      c = Math.cos(angle),
+      mc = 1 - c,
+      s = Math.sin(angle),
+      a21 = mc * x * y ,
+      a31 = mc * x * z,
+      a32 = mc * y * z,
+      sx = s * x,
+      sy = s * y,
+      sz = s * z;
+    return [
+      c + mc * x * x, a21 - sz,       a31 + sy,       0,
+      a21 + sz,       c + mc * y * y, a32  + sx,      0,
+      a31 + sy,       a32 + sx,       c + mc * z * z, 0,
+      0,              0,              0,              1
+    ];
+  },
+
   scaling: function(sx, sy, sz) {
     return [
       sx, 0,  0,  0,
@@ -649,6 +663,10 @@ export const Vx3Utils = {
     return [ a[0] + b[0], a[1] + b[1], a[2] + b[2] ];
   } ,
 
+  diff: function(a, b) {
+    return [ a[0] - b[0], a[1] - b[1], a[2] - b[2] ];
+  } ,
+
   multiply: function(k, v) {
     return [ k * v[0], k * v[1], k * v[2] ];
   },
@@ -659,7 +677,60 @@ export const Vx3Utils = {
       v[0] * mx[1] + v[1] * mx[4] + v[2] * mx[7],
       v[0] * mx[2] + v[1] * mx[5] + v[2] * mx[8]
     ];
-  }
+  },
+
+  xRotation: function(angleInRadians) {
+    var c = Math.cos(angleInRadians);
+    var s = Math.sin(angleInRadians);
+
+    return [
+      1, 0, 0,
+      0, c, s,
+      0, -s, c
+    ];
+  },
+
+  yRotation: function(angleInRadians) {
+    var c = Math.cos(angleInRadians);
+    var s = Math.sin(angleInRadians);
+
+    return [
+      c, 0, -s,
+      0, 1, 0,
+      s, 0, c
+    ];
+  },
+
+  zRotation: function(angleInRadians) {
+    var c = Math.cos(angleInRadians);
+    var s = Math.sin(angleInRadians);
+
+    return [
+      c, s, 0,
+      -s, c, 0,
+      0, 0, 1,
+    ];
+  },
+
+  axisRotation: function (axisDirection, angle) {
+    let x = axisDirection[0],
+      y = axisDirection[1],
+      z = axisDirection[2],
+      c = Math.cos(angle),
+      mc = 1 - c,
+      s = Math.sin(angle),
+      a21 = mc * x * y ,
+      a31 = mc * x * z,
+      a32 = mc * y * z,
+      sx = s * x,
+      sy = s * y,
+      sz = s * z;
+    return [
+      c + mc * x * x, a21 - sz,       a31 + sy,
+      a21 + sz,       c + mc * y * y, a32  + sx,
+      a31 + sy,       a32 + sx,       c + mc * z * z
+    ];
+  },
 };
 
 

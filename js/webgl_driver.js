@@ -1,17 +1,21 @@
-import {Vx3Utils, Mx4Util, Transform3dBuilder} from './math_utils.js'
-import {MODE_2D, MODE_3D, TYPE_DIFFUSE_COLORED, TYPE_HAVE_NORMALS, TYPE_TEXTURED} from './webgl_utils.js'
 
-export function WglUtil(canvasEl){
+"use strict";
+
+import {Vx3Utils, Mx4Util, Transform3dBuilder} from './math_utils.js';
+import {MODE_2D, MODE_3D, TYPE_DIFFUSE_COLORED, TYPE_HAVE_NORMALS, TYPE_TEXTURED} from './webgl_utils.js';
+import {log} from './debug_utils.js';
+
+export function WebglDriver(canvasEl){
 
   var scenes = {},
-    currentSceneName;
-
-  var textures = {};
-  var framebuffers = [];
-  var initingGeometries = [];
-  var self = this;
-  var programs = {};
-  var shadersDataMap = {};
+    currentSceneName,
+    viewports = {},
+    currentViewportName,
+    textures = {},
+    framebuffers = [],
+    initingGeometries = [],
+    self = this,
+    programs = {};
 
   this.addScene = (scene) => {
     scenes[scene.getName()] = scene;
@@ -27,6 +31,24 @@ export function WglUtil(canvasEl){
   this.getScene = function() {
     return scenes[currentSceneName];
   };
+
+  this.addViewport = (viewport) => {
+    viewports[viewport.getName()] = viewport;
+    if (currentViewportName == null) {
+      currentViewportName = viewport.getName();
+    }
+  };
+
+  this.setCurrentViewport = (name) => {
+    currentViewportName = name;
+  };
+
+
+
+  this.getViewport = function() {
+    return viewports[currentViewportName];
+  };
+
 
 
   var gl = canvasEl.getContext("webgl");
@@ -47,17 +69,17 @@ export function WglUtil(canvasEl){
     return Promise.all(initingGeometries);
   };
 
-  this.initGeometry = function(geometry) {
+  this.initFigure = function(figure) {
     for (let i in scenes) {
-      initingGeometries.push(createProgram(geometry.vertexShaderName, geometry.fragmentShaderName,
-          geometry.shadersParams, i)
+      initingGeometries.push(createProgram(figure.vertexShaderName, figure.fragmentShaderName,
+          figure.shadersParams, i)
         .then(programWrapper => {
-          if (geometry.program == null) {
-            geometry.program = {};
+          if (figure.program == null) {
+            figure.program = {};
           }
-          geometry.program[i] = programWrapper;
+          figure.program[i] = programWrapper;
           if (typeof programWrapper.initBuffers == 'function') {
-            programWrapper.initBuffers(geometry);
+            programWrapper.initBuffers(figure);
           }
         }));
     }
@@ -193,36 +215,49 @@ export function WglUtil(canvasEl){
     gl.clearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    let start = window.performance.now();
     for (var i in geometries) {
-      var geometry = geometries[i];
-      if (geometry.cullFace == 'CCW') {
+      var figure = geometries[i];
+      let vertCount = typeof figure.getVertCount == "function" ? figure.getVertCount() : null;
+      if (vertCount === 0) {
+        continue;
+      }
+      if (figure.cullFace == 'CCW') {
         gl.enable(gl.CULL_FACE);
         gl.cullFace(gl.BACK);
-      } else if (geometry.cullFace == 'CW') {
+      } else if (figure.cullFace == 'CW') {
         gl.enable(gl.CULL_FACE);
         gl.cullFace(gl.FRONT);
       } else {
         gl.disable(gl.CULL_FACE);
       }
-      if (geometry.depthTestEnabled) {
+      if (figure.depthTestEnabled) {
         gl.enable(gl.DEPTH_TEST);
       } else {
         gl.disable(gl.DEPTH_TEST);
       }
-      let programWrapper = geometry.program[self.getScene().getName()];
+      let programWrapper = figure.program[self.getScene().getName()];
       gl.useProgram(programWrapper.program);
-      programWrapper.setBuffers(geometry);
+      let indexType = programWrapper.setBuffers(figure);
       if (typeof programWrapper.setTextures == 'function') {
-        programWrapper.setTextures(geometry);
+        programWrapper.setTextures(figure);
       }
       if (typeof programWrapper.fillFragmUniforms == 'function') {
-        programWrapper.fillFragmUniforms(geometry);
+        programWrapper.fillFragmUniforms(figure);
       }
       if (typeof programWrapper.fillVertUniforms == 'function') {
-        programWrapper.fillVertUniforms(geometry);
+        programWrapper.fillVertUniforms(figure, self.getViewport());
       }
-      gl.drawArrays(gl[geometry.primitiveType], geometry.offset, geometry.vertCount);
+      let offset = typeof figure.getOffset == "function" ? figure.getOffset() : 0;
+      if (indexType != null) {
+        vertCount = vertCount != null ? vertCount : figure.indexes.data.length;
+        gl.drawElements(gl[figure.primitiveType], vertCount, indexType, figure.offset);
+      } else {
+        vertCount = vertCount != null ? vertCount : Math.floor(figure.positions.data.length / 3);
+        gl.drawArrays(gl[figure.primitiveType], figure.offset, vertCount);
+      }
     }
+    log('v_dT', window.performance.now() - start);
   };
 
   function resize(canvas) {
@@ -233,8 +268,6 @@ export function WglUtil(canvasEl){
       canvas.height = height;
     }
   }
-
-
 
 
 
