@@ -1,5 +1,5 @@
 
-import {notNull, DirectionReversedHolder, SizeHolder, PositionHolder, Nameable} from './utils.js'
+import {notNull, DirectionReversedHolder, SizeHolder, PositionHolder, Nameable} from './utils.mjs'
 
 
 
@@ -61,7 +61,7 @@ function Spotlight(position, luminousIntensity, size, direction, nearLimit, farL
   Object.assign(this, new DirectionReversedHolder(direction));
   Object.assign(this, new GraphicRepresentationHolder(graphicRepresentation, self));
 
-  this.getNearLimit = () => nearLimit;
+  this.getNearLimit = function () {return  nearLimit};
   this.setNearLimit = (value) => {
     notNull(value, 'spot light nearLimit');
     nearLimit = value;

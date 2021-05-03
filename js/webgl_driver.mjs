@@ -1,9 +1,8 @@
 
 "use strict";
 
-import {Vx3Utils, Mx4Util, Transform3dBuilder} from './math_utils.js';
-import {MODE_2D, MODE_3D, TYPE_DIFFUSE_COLORED, TYPE_HAVE_NORMALS, TYPE_TEXTURED} from './webgl_utils.js';
-import {log} from './debug_utils.js';
+import {log} from './debug_utils.mjs';
+import {FiguresPrototypesRegistry} from "./core/figure_prtotypes_regitry.mjs";
 
 export function WebglDriver(canvasEl){
 
@@ -15,7 +14,8 @@ export function WebglDriver(canvasEl){
     framebuffers = [],
     initingGeometries = [],
     self = this,
-    programs = {};
+    programs = {},
+    figurePrototypesRegistry = new FiguresPrototypesRegistry();
 
   this.addScene = (scene) => {
     scenes[scene.getName()] = scene;
@@ -70,18 +70,24 @@ export function WebglDriver(canvasEl){
   };
 
   this.initFigure = function(figure) {
-    for (let i in scenes) {
-      initingGeometries.push(createProgram(figure.vertexShaderName, figure.fragmentShaderName,
-          figure.shadersParams, i)
-        .then(programWrapper => {
-          if (figure.program == null) {
-            figure.program = {};
-          }
-          figure.program[i] = programWrapper;
-          if (typeof programWrapper.initBuffers == 'function') {
-            programWrapper.initBuffers(figure);
-          }
-        }));
+    let prototype = figurePrototypesRegistry.findOrAdd(figure);
+    if (prototype._programWrapper == null) {
+      for (let i in scenes) {
+        initingGeometries.push(createProgram(prototype.vertexShaderName, prototype.fragmentShaderName,
+          prototype.shadersParams, i)
+          .then(programWrapper => {
+            if (prototype._programWrapper == null) {
+              prototype._programWrapper = {};
+            }
+            prototype._programWrapper[i] = programWrapper;
+            programWrapper.initBuffers(prototype.buffersData);
+            figure._programWrapper = prototype._programWrapper;
+            figure.buffersData = prototype.buffersData;
+          }));
+      }
+    } else {
+      figure._programWrapper = prototype._programWrapper;
+      figure.buffersData = prototype.buffersData;
     }
   };
 
@@ -125,7 +131,7 @@ export function WebglDriver(canvasEl){
   function createShaderPromise(type, shaderName, shadersParams, scene) {
     var vertexShaderData;
 
-    return import('./shaders/' + shaderName + '.js')
+    return import('./shaders/' + shaderName + '.mjs')
       .then((module) =>  module.getBuilder(shadersParams, scene, self))
       .then(shaderBuilder => {
         vertexShaderData = new shaderBuilder();
@@ -134,10 +140,6 @@ export function WebglDriver(canvasEl){
         vertexShaderData.shader = createShader(type, shaderSource);
         return vertexShaderData;
       });
-  }
-
-  function getShaderBuilder(name) {
-      return ;
   }
 
   function createShader(type, source) {
@@ -236,9 +238,9 @@ export function WebglDriver(canvasEl){
       } else {
         gl.disable(gl.DEPTH_TEST);
       }
-      let programWrapper = figure.program[self.getScene().getName()];
+      let programWrapper = figure._programWrapper[self.getScene().getName()];
       gl.useProgram(programWrapper.program);
-      let indexType = programWrapper.setBuffers(figure);
+      let indexType = programWrapper.setBuffers(figure.buffersData);
       if (typeof programWrapper.setTextures == 'function') {
         programWrapper.setTextures(figure);
       }
@@ -253,7 +255,7 @@ export function WebglDriver(canvasEl){
         vertCount = vertCount != null ? vertCount : figure.indexes.data.length;
         gl.drawElements(gl[figure.primitiveType], vertCount, indexType, figure.offset);
       } else {
-        vertCount = vertCount != null ? vertCount : Math.floor(figure.positions.data.length / 3);
+        vertCount = vertCount != null ? vertCount : Math.floor(figure.buffersData.positions.data.length / 3);
         gl.drawArrays(gl[figure.primitiveType], figure.offset, vertCount);
       }
     }

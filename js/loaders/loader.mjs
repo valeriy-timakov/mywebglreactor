@@ -1,19 +1,20 @@
 
 "use strict";
 
-import {sphere, sphereIndexed} from '../figures/sphere.js'
-import {cube, cubeIdexed} from '../figures/cube.js'
-import {Transform3dBuilder, Transform2DBuilder} from '../math_utils.js'
-import {Controles} from '../controles.js'
-import {Camera, Projection, Viewport} from '../viewport.js'
-import {PointLight, Scene, Spotlight} from "../scene.js";
-import {Nameable} from "../utils.js";
+import {sphere, sphereIndexed} from '../figures/sphere.mjs'
+import {cube, cubeIdexed} from '../figures/cube.mjs'
+import {Transform3dBuilder, Transform2DBuilder} from '../math_utils.mjs'
+import {Controls} from '../controles.mjs'
+import {Camera, Projection, Viewport} from '../viewport.mjs'
+import {PointLight, Scene, Spotlight} from "../scene.mjs";
+import {Nameable} from "../utils.mjs";
+import {log} from "../debug_utils.mjs";
 
 
 const Loader = {
   loadViewports: function() {
     let mainCamera = new Camera([0, 0, 0], [0, 0, -1], [0, 1, 0]);
-    Controles.addKineticUnit('camera', {
+   /* Controls.addKineticUnit('camera', {
       initialPosition: mainCamera.getPosition(),
       initialDirection: mainCamera.getRevDirection(),
       initialUp: mainCamera.getUp(),
@@ -40,7 +41,7 @@ const Loader = {
       mainCamera.setPosition(position);
       mainCamera.setDirection(direction);
       mainCamera.setUp(up);
-    });
+    });*/
     return Promise.resolve( [
       new Viewport('back', new Camera([0, 0, -20], [0, 0, 1], [1, 1, 0]),
         new Projection(0.1, 1000, 2.7, 8/6)),
@@ -62,7 +63,7 @@ const Loader = {
      scene.addLight(new DirectLight([0, 1, 0], [1, 0, 0]));
      scene.addLight(new DirectLight([1, 0, 0], [0, 1, 0]));*/
     scene.addLight(new PointLight([-1, 1, -6], [0.8, 0.6, 0.0], 0.3));
-    scene.addLight(new Spotlight([1, 1, -9], [0, 0, 1], 0.3), [-0.8, -0.5], -1, 0.86, 2);
+    scene.addLight(new Spotlight([1, 1, -9], [0, 0, 1], 0.3, [-0.8, -0.5], -1, 0.86, 2));
     scene.setAmbientLight([0, 0, 0]);
     scene.setLightSensitivityCfnt([1, 1, 1])
     scene.setClearColor({r: 0.6, g: 0.6, b: 0.8, a: 0.8});
@@ -111,97 +112,82 @@ function GraphicObject1(name) {
     g3
   ];
   this.getFigures = () => figures;
-  this.initFigures = () => {
-    figures = figures.map(figure => Object.assign({}, figure.__figure_prototype, figure));
-  };
 }
 function GraphicObject2(name) {
 
   Object.assign(this, new Nameable(name));
 
   var g5 = createGeomItem(cube);
-  transformGeom2(g5, Controles.getState(), 0, 0, -8);
-  Controles.addListener(function(state) {
+  transformGeom2(g5, Controls.getState(), 0, 0, -8);
+  Controls.addListener(function(state) {
     transformGeom2(g5, state, 0, 0, -8);
   });
 
   function transformGeom2(geom, state, x, y, z) {
     var bt3 = new Transform3dBuilder();
-    bt3.rotateX(state.y * 2 * Math.PI / 300);
-    bt3.rotateY(state.x * 2 * Math.PI / 300);
+    bt3.rotateX(state.getY() * 2 * Math.PI / 300);
+    bt3.rotateY(state.getX() * 2 * Math.PI / 300);
     bt3.move(x, y, z);
     geom.transform = bt3;
   }
   this.getFigures = () => [g5];
-  this.initFigures = () => {
-    g5 = Object.assign({}, g5.__figure_prototype, g5);
-  };
 }
 function GraphicObject4(name) {
 
   Object.assign(this, new Nameable(name));
 
   var g5 = createGeomItem(cubeIdexed);
-  transformGeom2(g5, Controles.getState(), 1.8, -2.8, -7);
-  Controles.addListener(function(state) {
+  transformGeom2(g5, Controls.getState(), 1.8, -2.8, -7);
+  Controls.addListener(function(state) {
     transformGeom2(g5, state, 1.8, -2.8, -7);
   });
 
   function transformGeom2(geom, state, x, y, z) {
     var bt3 = new Transform3dBuilder();
-    bt3.rotateX(state.y * 2 * Math.PI / 300);
-    bt3.rotateY(state.x * 2 * Math.PI / 300);
+    bt3.rotateX(state.getY() * 2 * Math.PI / 300);
+    bt3.rotateY(state.getX() * 2 * Math.PI / 300);
     bt3.move(x, y, z);
     geom.transform = bt3;
   }
   this.getFigures = () => [g5];
-  this.initFigures = () => {
-    g5 = Object.assign({}, g5.__figure_prototype, g5);
-  };
 }
 function GraphicObject3(name) {
 
   Object.assign(this, new Nameable(name));
 
   var g7 = createGeomItem(sphere);
-  transformGeom3(g7, Controles.getState(), -1.7, -1.5, -5);
-  Controles.addListener(function(state) {
+  transformGeom3(g7, Controls.getState(), -1.7, -1.5, -5);
+  Controls.addListener(function(state) {
     transformGeom3(g7, state, -1.7, -1.5);
   });
 
   function transformGeom3(geom, state, x, y) {
     var bt3 = new Transform3dBuilder();
-    bt3.move(x, y, state.z/100);
-    document.getElementById('v_z').innerText = state.z/100;
+    bt3.move(x, y, state.getZ()/100);
+    log('v_z', state.z/100)
     geom.transform = bt3;
   }
 
   this.getFigures = () => [g7];
-  this.initFigures = () => {
-    g7 = Object.assign({}, g7.__figure_prototype, g7);
-  };
 }
 function GraphicObject5(name) {
 
   Object.assign(this, new Nameable(name));
 
   var g7 = createGeomItem(sphereIndexed);
-  transformGeom3(g7, Controles.getState(), -1.7, 1.7, -5);
-  Controles.addListener(function(state) {
+  transformGeom3(g7, Controls.getState(), -1.7, 1.7, -5);
+  Controls.addListener(function(state) {
     transformGeom3(g7, state, -1.7, 1.7);
   });
 
   function transformGeom3(geom, state, x, y) {
     var bt3 = new Transform3dBuilder();
-    bt3.move(x, y, state.z/100);
-    document.getElementById('v_z').innerText = state.z/100;
+    bt3.move(x, y, state.getZ()/100);
+    log('v_z', state.z/100)
     geom.transform = bt3;
   }
 
   this.getFigures = () => [g7];
-  this.initFigures = () => {
-    g7 = Object.assign({}, g7.__figure_prototype, g7);
-  };
 }
 
 
@@ -210,27 +196,29 @@ var figure1 = {
     getVertCount: () => 4,
     shadersParams: 'MODE=2D,DIFFUSE_COLORE_SOURCE=VERTEX',
     combinedBuffer: false,
-    bufferUseType: 'STATIC_DRAW',
-    positions:  {
-      data: [
-        0, 0,
-        0, 0.5,
-        0.7, 0,
-        0.7, 0.5
-      ],
-      type: 'float'
-    },
-    diffuseColors: {
-      data: [
-        255, 179, 230, 255,
-        255, 0, 0, 255,
-        0, 255, 0, 206,
-        0, 0, 255, 255,
-        255, 255, 0, 255,
-        255, 255, 255, 255
-      ],
-      normalized: true,
-      type: 'u_byte'
+    buffersData: {
+      useType: 'STATIC_DRAW',
+      positions: {
+        data: [
+          0, 0,
+          0, 0.5,
+          0.7, 0,
+          0.7, 0.5
+        ],
+        type: 'float'
+      },
+      diffuseColors: {
+        data: [
+          255, 179, 230, 255,
+          255, 0, 0, 255,
+          0, 255, 0, 206,
+          0, 0, 255, 255,
+          255, 255, 0, 255,
+          255, 255, 255, 255
+        ],
+        normalized: true,
+        type: 'u_byte'
+      }
     },
     transform: {},
     getWorldTransform: function() {
@@ -242,16 +230,18 @@ var figure1 = {
     primitiveType: 'TRIANGLES',
     getVertCount: () => 3,
     shadersParams: 'MODE=2D,DIFFUSE_COLORE_SOURCE=MATERIAL',
-    bufferUseType: 'STATIC_DRAW',
-    positions:  {
-      data: [
-        0, 0,
-        0, 200,
-        300, 0
-      ],
-      type: 'float'
+    buffersData: {
+      useType: 'STATIC_DRAW',
+      positions: {
+        data: [
+          0, 0,
+          0, 200,
+          300, 0
+        ],
+        type: 'float'
+      }
     },
-    getDiffuseColor: function() {
+    getDiffuseColor: function () {
       return {
         r: 1,
         g: 0.6,
@@ -268,25 +258,27 @@ var figure1 = {
     primitiveType: 'TRIANGLE_STRIP',
     getVertCount: () => 4,
     shadersParams: 'MODE=2D,DIFFUSE_COLORE_SOURCE=TEXTURE',
-    bufferUseType: 'STATIC_DRAW',
-    positions:  {
-      data: [
-        0, 0,
-        0, 0.5,
-        0.7, 0,
-        0.7, 0.5
-      ],
-      type: 'float'
-    },
-    diffuseTexturePositions: {
-      data: [
-        0, 0,
-        0, 1,
-        1, 0,
-        1, 1
-      ],
-      type: 'float'
+    buffersData: {
+      useType: 'STATIC_DRAW',
+      positions: {
+        data: [
+          0, 0,
+          0, 0.5,
+          0.7, 0,
+          0.7, 0.5
+        ],
+        type: 'float'
+      },
+      diffuseTexturePositions: {
+        data: [
+          0, 0,
+          0, 1,
+          1, 0,
+          1, 1
+        ],
+        type: 'float'
 
+      }
     },
     diffuseTextureName: 'tst',
     transform: {},
@@ -321,8 +313,6 @@ function pm(geom, dx, dy, angle, sx, sy, project) {
 
 
 function createGeomItem(figure) {
-  return {
-    __figure_prototype: figure
-  };
+  return Object.assign({}, figure);
 }
 

@@ -1,8 +1,8 @@
 
-import {Transform3dBuilder, Mx4Util, Vx3Utils} from './math_utils.js'
-import {Nameable} from "./utils.js";
+import {Transform3dBuilder, Mx4Util, Vx3Utils} from './math_utils.mjs'
+import {Nameable} from "./utils.mjs";
 
-import {notNull, PositionHolder, DirectionReversedHolder} from './utils.js'
+import {notNull, PositionHolder, DirectionReversedHolder} from './utils.mjs'
 
 function Camera(position, direction, up) {
 

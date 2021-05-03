@@ -1,6 +1,6 @@
 "use strict";
 
-import {Ajax} from './libs/ajax.js'
+import {Ajax} from './libs/ajax.mjs'
 
 export const TYPE_DIFFUSE_COLORED = 'DIFFUSE_COLORED',
   TYPE_SPECULAR_COLORED = 'SPECULAR_COLORED',
@@ -151,10 +151,17 @@ export function UniformAccessor(gl, program) {
   }
 
   function setFullQualifiedVar(varFullName, type, value) {
+    var vector = value instanceof Array;
+    if (vector) {
+      for (let i in value) {
+        if (isNaN(value[i])) throw new Error("Uniform value is NaN! " + varFullName  + '=' + value)
+      }
+    } else {
+      if (isNaN(value)) throw new Error("Uniform value is NaN! " + varFullName  + '=' + value)
+    }
     if (type.matrix) {
       gl['uniformMatrix' + type.fnSuffix + 'v'](uniformLocations[varFullName], false, value);
     } else {
-      var vector = value instanceof Array;
       gl['uniform' + type.fnSuffix + (vector ? 'v' : '')](uniformLocations[varFullName], value);
     }
   }

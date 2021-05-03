@@ -1,7 +1,7 @@
 "use strict";
 
 import { parseParams, UniformTypes, UniformAccessor, ShaderVarKind, ComplexTypes,
-  ShaderBuilder, COLOR_SOURCE_MATERIAL, COLOR_SOURCE_TEXTURE, COLOR_SOURCE_VERTEX, MODE_3D_WITH_LIGHT } from './../webgl_utils.js'
+  ShaderBuilder, COLOR_SOURCE_MATERIAL, COLOR_SOURCE_TEXTURE, COLOR_SOURCE_VERTEX, MODE_3D_WITH_LIGHT } from '../webgl_utils.mjs'
 
 export function getBuilder(params, scene, driver) {
 

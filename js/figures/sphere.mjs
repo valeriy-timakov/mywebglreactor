@@ -1,23 +1,25 @@
 
-import {createSphere, createSphereIndexed} from './figures_creator.js'
+import {createSphere, createSphereIndexed} from './figures_creator.mjs'
 
 let d = createSphere(1.7, 500);
 export const sphere = {
   primitiveType: 'TRIANGLE_STRIP',
   getVertCount: function () {
-    return Math.floor( this.positions.data.length / 3);
+    return Math.floor( this.buffersData.positions.data.length / 3);
   },
   vertexShaderName: 'UNIVERSAL',
   shadersParams: 'MODE=3D_WITH_LIGHT,DIFFUSE_COLORE_SOURCE=MATERIAL,SPECULAR_COLORE_SOURCE=MATERIAL,BRILLIANCE_SOURCE=MATERIAL,RADIANCE_SOURCE=MATERIAL',
   fragmentShaderName: 'UNIVERSAL',
-  bufferUseType: 'STATIC_DRAW',
-  positions:  {
-    data: d.vertices,
-    type: 'float'
-  },
-  normals: {
-    data: d.normals,
-    type: 'float'
+  buffersData: {
+    useType: 'STATIC_DRAW',
+    positions: {
+      data: d.vertices,
+      type: 'float'
+    },
+    normals: {
+      data: d.normals,
+      type: 'float'
+    }
   },
   depthTestEnabled: true,
   cullFace: null,
@@ -37,18 +39,20 @@ export const sphereIndexed = {
   vertexShaderName: 'UNIVERSAL',
   shadersParams: 'MODE=3D_WITH_LIGHT,DIFFUSE_COLORE_SOURCE=MATERIAL,SPECULAR_COLORE_SOURCE=MATERIAL,BRILLIANCE_SOURCE=MATERIAL,RADIANCE_SOURCE=MATERIAL',
   fragmentShaderName: 'UNIVERSAL',
-  bufferUseType: 'STATIC_DRAW',
-  indexes:  {
-    data: di.indexes,
-    type: 'u_short'
-  },
-  positions:  {
-    data: di.vertices,
-    type: 'float'
-  },
-  normals: {
-    data: di.normals,
-    type: 'float'
+  buffersData: {
+    useType: 'STATIC_DRAW',
+    indexes: {
+      data: di.indexes,
+      type: 'u_short'
+    },
+    positions: {
+      data: di.vertices,
+      type: 'float'
+    },
+    normals: {
+      data: di.normals,
+      type: 'float'
+    }
   },
   depthTestEnabled: true,
   cullFace: null,

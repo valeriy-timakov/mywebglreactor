@@ -1,6 +1,6 @@
 
 "use strict";
-import {Vx3Utils} from '../math_utils.js';
+import {Vx3Utils} from '../math_utils.mjs';
 
 export function createSphere(radius, n) {
   let halfResVertices = [],
@@ -192,6 +192,11 @@ export function createCone(radius, height, n) {
     }
   }
   normals.push(Vx3Utils.normalize( Vx3Utils.add(prevNormal, firstNormal) ));
+  return {
+    indexes: indexes,
+    vertices:vertices,
+    normals: normals
+  };
 }
 
 export function createCylinder(radius, height, n) {
@@ -242,7 +247,10 @@ export function createCylinder(radius, height, n) {
     indexes.push(1);
     indexes.push(9 + lineNum * 4);//3+4=7
     indexes.push(5 + i * 4);//3
-
   }
-
+  return {
+    indexes: indexes,
+    vertices:vertices,
+    normals: normals
+  };
 }

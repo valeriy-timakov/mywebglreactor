@@ -1,8 +1,8 @@
 
 "use strict";
 
-import {Vx3Utils} from './math_utils.js';
-import {log} from './debug_utils.js';
+import {Vx3Utils} from './math_utils.mjs';
+import {log} from './debug_utils.mjs';
 
 const KeyData = {
   "Backspace": ["Backspace", 8],
@@ -468,7 +468,7 @@ function addKineticUnit(name, settings, listener) {
 
 }
 
-const Controles = {
+const Controls = {
   addListener: addListener,
   setUpdateFinishedListener: setUpdateFinishedListener,
   getState: getState,
@@ -478,4 +478,4 @@ const Controles = {
   addKineticUnit: addKineticUnit
 };
 
-export {Controles}
+export {Controls}

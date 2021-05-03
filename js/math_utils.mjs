@@ -23,6 +23,11 @@ export function Transform3dBuilder(initialTransform) {
   var self = this;
 
   this.move = function(dx, dy, dz) {
+    if (dx instanceof Array && dy == null && dz == null) {
+      dx = dx[0];
+      dy = dx[1];
+      dz = dx[2];
+    }
     result = Mx4Util.multiply(result, Mx4Util.translation(dx, dy, dz));
     return self;
   };
@@ -76,6 +81,11 @@ export function Transform3dBuilder(initialTransform) {
     result = Mx4Util.transponse(result);
     return self;
   };
+
+  this.orientByDirection = function (direction) {
+    result = Mx4Util.multiply(result, Mx4Util.orientByDirection( direction ));
+    return self;
+  }
 
 }
 
@@ -609,6 +619,18 @@ export const Mx4Util = {
       (near + far) / (near - far),
       1
     ];
+  },
+
+  orientByDirection: function(direction) {
+    let sb = direction[1],
+      cb = Math.sqrt(1 + sb * sb),
+      sa = direction[2] / cb,
+      ca = direction[0] / cb;
+    return this.inverse([
+      cb,       0,  sb,
+      sa * sb,  ca, -sa * cb,
+      -ca * sb, sa, ca * cb
+    ]);
   },
 
 

@@ -1,8 +1,8 @@
 "use strict";
 
-import {WebglDriver} from './webgl_driver.js';
-import {Controles} from "./controles.js";
-import {Loader} from "./loaders/loader.js";
+import {WebglDriver} from './webgl_driver.mjs';
+import {Controls} from "./controles.mjs";
+import {Loader} from "./loaders/loader.mjs";
 
 
 var driver,
@@ -15,8 +15,7 @@ var driver,
 function run() {
   driver = new WebglDriver(window.document.getElementById('c'));
 
-  var initedFigurePrototypes = [],
-    wait = [];
+  var wait = [];
 
   Loader.loadTextures().then(textures => {
     textures.forEach(texture => { driver.initTexture(texture.name, texture.image) } );
@@ -37,7 +36,7 @@ function run() {
         .map(graphicObject => graphicObject.getFigures())
         .flat()
         .forEach(figure => {
-          initFigure(figure);
+          driver.initFigure(figure);
         });
     } )
   );
@@ -60,7 +59,7 @@ function run() {
         .map(go => go.getFigures())
         .flat()
         .forEach(figure => {
-          initFigure(figure);
+          driver.initFigure(figure);
         });
 
       graphicObjects
@@ -70,9 +69,7 @@ function run() {
           driver.initFrameBuffer(fbData.name, fbData.textureWidth, fbData.textureHeight);
         });
 
-      return driver.geometriesInited().then(() => {
-        graphicObjects.forEach(go => { go.initFigures() });
-      });
+      return driver.geometriesInited();
 
     } )
   );
@@ -82,15 +79,7 @@ function run() {
     render();
   });
 
-
-  function initFigure(figure) {
-    if (initedFigurePrototypes.indexOf(figure.__figure_prototype) == -1) {
-      driver.initFigure(figure.__figure_prototype);
-      initedFigurePrototypes.push(figure.__figure_prototype);
-    }
-  }
-
-  Controles.setUpdateFinishedListener(() => { render(); });
+  Controls.setUpdateFinishedListener(() => { render(); });
 
 };
 
