@@ -69,27 +69,85 @@ export function WebglDriver(canvasEl){
     return Promise.all(initingGeometries);
   };
 
+  var figuresInited = 0,
+    prototypeReusageCount = 0;
+
   this.initFigure = function(figure) {
-    let prototype = figurePrototypesRegistry.findOrAdd(figure);
-    if (prototype._programWrapper == null) {
-      for (let i in scenes) {
-        initingGeometries.push(createProgram(prototype.vertexShaderName, prototype.fragmentShaderName,
-          prototype.shadersParams, i)
-          .then(programWrapper => {
-            if (prototype._programWrapper == null) {
-              prototype._programWrapper = {};
-            }
-            prototype._programWrapper[i] = programWrapper;
-            programWrapper.initBuffers(prototype.buffersData);
-            figure._programWrapper = prototype._programWrapper;
-            figure.buffersData = prototype.buffersData;
-          }));
-      }
-    } else {
-      figure._programWrapper = prototype._programWrapper;
-      figure.buffersData = prototype.buffersData;
-    }
+    initFigure(figure, true);
   };
+
+  function initFigure(figure, firstAttempt) {
+    let {
+      prototype: prototype,
+      found: found
+    } = figurePrototypesRegistry.findOrAdd(figure);
+    if (found) {
+      if (prototype._programWrapper == null) {
+        if (firstAttempt === true) {
+          Promise.all(initingGeometries).then(() => {
+            initFigure(figure, false);
+          });
+          return;
+        }
+      } else {
+        figure._programWrapper = prototype._programWrapper;
+        figure.buffersData = prototype.buffersData;
+        prototypeReusageCount++;
+        figuresInited++;
+        log('v_reus', prototypeReusageCount / figuresInited);
+        return;
+      }
+    }
+    initProtorype(prototype, (rPprototype) => {
+      figure._programWrapper = rPprototype._programWrapper;
+      figure.buffersData = rPprototype.buffersData;
+      figuresInited++;
+      log('v_reus', prototypeReusageCount / figuresInited);
+    });
+  }
+
+  this.initFigures = function(figures) {
+    var prototypes = new Map();
+    figures.forEach(figure => {
+      let {
+        prototype: prototype,
+        found: found
+      } = figurePrototypesRegistry.findOrAdd(figure);
+      let figures;
+      if (found) {
+        figures = prototypes.get(prototype);
+      } else {
+        figures = [];
+        prototypes.set(prototype, figures);
+        figures.push(figure);
+      }
+    });
+    prototypes.forEach((figures, proto) => {
+      initProtorype(proto, rProto => {
+        figures.forEach(figure => {
+          figure._programWrapper = rProto._programWrapper;
+          figure.buffersData = rProto.buffersData;
+        });
+      });
+    });
+    log('v_reus', prototypes.size / figures.length);
+  }
+
+  function initProtorype(prototype, callback) {
+    for (let i in scenes) {
+      initingGeometries.push(createProgram(prototype.vertexShaderName, prototype.fragmentShaderName,
+        prototype.shadersParams, i)
+        .then(programWrapper => {
+          if (prototype._programWrapper == null) {
+            prototype._programWrapper = {};
+          }
+          prototype._programWrapper[i] = programWrapper;
+          programWrapper.initBuffers(prototype.buffersData);
+          callback(prototype);
+        }));
+    }
+
+  }
 
   const DEFAULT_SHADER_NAME = 'UNIVERSAL',
     VERTEX_SHADER_NAME_PREFIX = 'VS_',

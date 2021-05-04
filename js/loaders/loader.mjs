@@ -52,7 +52,8 @@ const Loader = {
       return Promise.resolve([
         new GraphicObject1(1),
         new GraphicObject2(2),
-        new GraphicObject4(4),
+        new GraphicObject4(4, 1.8, -2.8),
+        new GraphicObject4(44, 3.8, -2.8),
         new GraphicObject3(3),
         new GraphicObject5(5)
       ]);
@@ -63,7 +64,9 @@ const Loader = {
      scene.addLight(new DirectLight([0, 1, 0], [1, 0, 0]));
      scene.addLight(new DirectLight([1, 0, 0], [0, 1, 0]));*/
     scene.addLight(new PointLight([-1, 1, -6], [0.8, 0.6, 0.0], 0.3));
-    scene.addLight(new Spotlight([1, 1, -9], [0, 0, 1], 0.3, [-0.8, -0.5], -1, 0.86, 2));
+    scene.addLight(new Spotlight([1, 1, -9], [0, 0, 1], 0.3, [-0.8, -0.5],
+
+      -1, 0.86, 2));
     scene.setAmbientLight([0, 0, 0]);
     scene.setLightSensitivityCfnt([1, 1, 1])
     scene.setClearColor({r: 0.6, g: 0.6, b: 0.8, a: 0.8});
@@ -132,14 +135,14 @@ function GraphicObject2(name) {
   }
   this.getFigures = () => [g5];
 }
-function GraphicObject4(name) {
+function GraphicObject4(name, x, y) {
 
   Object.assign(this, new Nameable(name));
 
   var g5 = createGeomItem(cubeIdexed);
-  transformGeom2(g5, Controls.getState(), 1.8, -2.8, -7);
+  transformGeom2(g5, Controls.getState(), x, y, -7);
   Controls.addListener(function(state) {
-    transformGeom2(g5, state, 1.8, -2.8, -7);
+    transformGeom2(g5, state, x, y, -7);
   });
 
   function transformGeom2(geom, state, x, y, z) {
@@ -164,7 +167,7 @@ function GraphicObject3(name) {
   function transformGeom3(geom, state, x, y) {
     var bt3 = new Transform3dBuilder();
     bt3.move(x, y, state.getZ()/100);
-    log('v_z', state.z/100)
+    log('v_z', state.getZ()/100)
     geom.transform = bt3;
   }
 
@@ -183,7 +186,7 @@ function GraphicObject5(name) {
   function transformGeom3(geom, state, x, y) {
     var bt3 = new Transform3dBuilder();
     bt3.move(x, y, state.getZ()/100);
-    log('v_z', state.z/100)
+    log('v_z', state.getZ()/100)
     geom.transform = bt3;
   }
 

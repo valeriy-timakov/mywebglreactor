@@ -6,12 +6,17 @@ export function FiguresPrototypesRegistry() {
 
   this.findOrAdd = function (figure) {
     let arr = getPrototyesArr(figure),
-      prototype = find(arr, figure);
+      prototype = find(arr, figure),
+      found = true;
     if (prototype == null) {
       prototype = createPrototype(figure);
       arr.push(prototype);
+      found = false;
     }
-    return prototype;
+    return {
+      prototype: prototype,
+      found: found
+    };
 
   }
 
