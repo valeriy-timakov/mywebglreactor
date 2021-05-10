@@ -2,7 +2,6 @@
 
 export const cube = {
   primitiveType: 'TRIANGLES',
-  getVertCount: () => 50,
   vertexShaderName: 'UNIVERSAL',
   shadersParams: 'MODE=3D_WITH_LIGHT,DIFFUSE_COLORE_SOURCE=MATERIAL,SPECULAR_COLORE_SOURCE=MATERIAL,BRILLIANCE_SOURCE=MATERIAL,RADIANCE_SOURCE=MATERIAL',
   fragmentShaderName: 'UNIVERSAL',
@@ -153,10 +152,6 @@ export const cube = {
   },
   depthTestEnabled: true,
   cullFace: 'none',
-  transform: {},
-  getWorldTransform: function() {
-    return this.transform;
-  },
   getSpecularColor: () => { return {r: 1, g: 1, b: 0} },
   getDiffuseColor: () => {  return { r: 0, g: 0, b: 1, a: 1 } },
   getRadiance: () =>  { return {r: 0, g: 0, b: 0} },
@@ -275,10 +270,6 @@ export const cubeIdexed = {
   },
   cullFace: 'CCW',
   depthTestEnabled: true,
-  transform: {},
-  getWorldTransform: function() {
-    return this.transform;
-  },
   getSpecularColor: () => { return {r: 1, g: 1, b: 0} },
   getDiffuseColor: () => {  return { r: 0, g: 0, b: 1, a: 1 } },
   getRadiance: () =>  { return {r: 0, g: 0, b: 0} },

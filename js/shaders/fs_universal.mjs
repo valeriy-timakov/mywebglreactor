@@ -11,7 +11,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_materialDiffuseColor',
       type: UniformTypes.vec4,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         var color = figure.getDiffuseColor();
         uniformAccessor.setUniform(ShaderVars.u_materialDiffuseColor, [color.r, color.g, color.b, color.a]);
       }
@@ -20,7 +20,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_materialSpecularColor',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         var color = figure.getSpecularColor();
         uniformAccessor.setUniform(ShaderVars.u_materialSpecularColor, [color.r, color.g, color.b]);
       }
@@ -29,7 +29,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_materialBrilliance',
       type: UniformTypes.float,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         var color = figure.getBrilliance();
         uniformAccessor.setUniform(ShaderVars.u_materialBrilliance, figure.getBrilliance());
       }
@@ -38,7 +38,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_materialRadiance',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         var color = figure.getRadiance();
         uniformAccessor.setUniform(ShaderVars.u_materialRadiance, [color.r, color.g, color.b]);
       }
@@ -47,7 +47,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_diffuseTexture',
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         driver.bindTexture(figure.diffuseTextureName);
       }
     },
@@ -55,7 +55,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_specularTexture',
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         driver.bindTexture(figure.specularTextureName);
       }
     },
@@ -72,7 +72,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_radianceTexture',
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         driver.bindTexture(figure.radianceTextureName);
 
       }
@@ -81,7 +81,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_directLights',
       type: ComplexTypes.DirectLight,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         uniformAccessor.setStructsUniforms(scene.getDirectLights(), ShaderVars.u_directLights,
           uniformAccessor.getValuesExtractor(
             ShaderVars.u_directLights.type.components.directionRev, light => light.getRevDirection(),
@@ -96,7 +96,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_pointLights',
       type: ComplexTypes.PointLight,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         uniformAccessor.setStructsUniforms(scene.getPointLights(), ShaderVars.u_pointLights,
           uniformAccessor.getValuesExtractor(
             ShaderVars.u_pointLights.type.components.position, light => light.getPosition(),
@@ -113,7 +113,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_spotLights',
       type: ComplexTypes.Spotlight,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         uniformAccessor.setStructsUniforms(scene.getSpotLights(), ShaderVars.u_spotLights,
           uniformAccessor.getValuesExtractor(
             ShaderVars.u_spotLights.type.components.position, light => light.getPosition(),
@@ -138,7 +138,7 @@ export function getBuilder(params, scene, driver) {
       name: 'u_ambientLight',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         uniformAccessor.setUniform(ShaderVars.u_ambientLight, scene.getAmbientLight());
       }
     },
@@ -146,8 +146,16 @@ export function getBuilder(params, scene, driver) {
       name: 'u_lightSensitivityCfnt',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
-      set: (figure, uniformAccessor) => {
+      set: (uniformAccessor, figure) => {
         uniformAccessor.setUniform(ShaderVars.u_lightSensitivityCfnt, scene.getLightSensitivityCfnt());
+      }
+    },
+    u_cameraPosition: {
+      name: 'u_cameraPosition',
+      type: UniformTypes.vec3,
+      kind: ShaderVarKind.uniform,
+      set: (uniformAccessor, figure, viewport) => {
+        uniformAccessor.setUniform(ShaderVars.u_cameraPosition, viewport.getCamera().getPosition());
       }
     },
     v_diffuseTexturePosition: {
@@ -199,11 +207,6 @@ export function getBuilder(params, scene, driver) {
       name: 'v_surfacePosition',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.varying
-    },
-    v_cameraPosition: {
-      name: 'v_cameraPosition',
-      type: UniformTypes.vec3,
-      kind: ShaderVarKind.varying
     }
   };
 
@@ -224,43 +227,43 @@ export function getBuilder(params, scene, driver) {
 
       var v = ShaderVars;
 
-      if (config.diffuseColorSource == COLOR_SOURCE_TEXTURE) {
+      if (config.diffuseColorSource === COLOR_SOURCE_TEXTURE) {
         res.addInstruction('gl_FragColor = texture2D(', v.u_diffuseTexture, ', ', v.v_diffuseTexturePosition, ')');
-      } else if (config.diffuseColorSource == COLOR_SOURCE_MATERIAL) {
+      } else if (config.diffuseColorSource === COLOR_SOURCE_MATERIAL) {
         res.addInstruction('gl_FragColor = ', v.u_materialDiffuseColor);
-      } else if (config.diffuseColorSource == COLOR_SOURCE_VERTEX) {
+      } else if (config.diffuseColorSource === COLOR_SOURCE_VERTEX) {
         res.addInstruction('gl_FragColor = ', v.v_diffuseColor);
       } else {
         throw new Error('Undefined diffuse color source: ' + config.diffuseColorSource);
       }
 
-      if (config.mode == MODE_3D_WITH_LIGHT) {
+      if (config.mode === MODE_3D_WITH_LIGHT) {
 
-        if (config.specularColorSource == COLOR_SOURCE_TEXTURE) {
+        if (config.specularColorSource === COLOR_SOURCE_TEXTURE) {
           res.addInstruction('vec3 specularColor = texture2D(', v.u_specularTexture, ', ', v.v_specularTexturePosition, ')');
-        } else if (config.specularColorSource == COLOR_SOURCE_MATERIAL) {
+        } else if (config.specularColorSource === COLOR_SOURCE_MATERIAL) {
           res.addInstruction('vec3 specularColor = ', v.u_materialSpecularColor);
-        } else if (config.specularColorSource == COLOR_SOURCE_VERTEX) {
+        } else if (config.specularColorSource === COLOR_SOURCE_VERTEX) {
           res.addInstruction('vec3 specularColor = ', v.v_specularColor);
         } else {
           res.addInstruction('vec3 specularColor = vec3(0, 0, 0)');
         }
 
-        if (config.brillianceSource == COLOR_SOURCE_TEXTURE) {
+        if (config.brillianceSource === COLOR_SOURCE_TEXTURE) {
           res.addInstruction('float brilliance = texture2D(', v.u_brillianceTexture, ', ', v.v_brillianceTexturePosition, ')');
-        } else if (config.brillianceSource == COLOR_SOURCE_MATERIAL) {
+        } else if (config.brillianceSource === COLOR_SOURCE_MATERIAL) {
           res.addInstruction('float brilliance = ', v.u_materialBrilliance);
-        } else if (config.brillianceSource == COLOR_SOURCE_VERTEX) {
+        } else if (config.brillianceSource === COLOR_SOURCE_VERTEX) {
           res.addInstruction('float brilliance = ', v.v_brilliance);
         } else {
           res.addInstruction('float brilliance = 1.0');
         }
 
-        if (config.radianceSource == COLOR_SOURCE_TEXTURE) {
+        if (config.radianceSource === COLOR_SOURCE_TEXTURE) {
           res.addInstruction('vec3 radiance = texture2D(', v.u_radianceTexture, ', ', v.v_radianceTexturePosition, ')');
-        } else if (config.radianceSource == COLOR_SOURCE_MATERIAL) {
+        } else if (config.radianceSource === COLOR_SOURCE_MATERIAL) {
           res.addInstruction('vec3 radiance = ', v.u_materialRadiance);
-        } else if (config.radianceSource == COLOR_SOURCE_VERTEX) {
+        } else if (config.radianceSource === COLOR_SOURCE_VERTEX) {
           res.addInstruction('vec3 radiance = ', v.v_radiance);
         } else {
           res.addInstruction('vec3 radiance = vec3(0, 0, 0)');
@@ -288,7 +291,7 @@ export function getBuilder(params, scene, driver) {
           ', ', v.u_ambientLight,
           ', ', v.u_lightSensitivityCfnt,
           ', ', v.v_surfacePosition,
-          ', ', v.v_cameraPosition,
+          ', ', v.u_cameraPosition,
           ', gl_FragColor.rgb',
           ', specularColor',
           ', brilliance',
@@ -306,13 +309,11 @@ export function getBuilder(params, scene, driver) {
         .forEach(u => uniformAccessor.initUniform(u));
       shaderUniformsArrays.forEach(uData => {for (let i = 0; i < uData[1]; i++) uniformAccessor.initUniform(uData[0],i)});
 
-      programWrapper.fillFragmUniforms = function (figure) {
+      programWrapper.fillFragmUniforms = function (figure, viewport) {
         shaderUniforms
-          .filter(u => typeof u.set == 'function')
-          .forEach(u => u.set(figure, uniformAccessor));
+          .forEach(u => u.set(uniformAccessor, figure, viewport));
         shaderUniformsArrays
-          .filter(uData => typeof uData[0].set == 'function')
-          .forEach( uData =>  uData[0].set(figure, uniformAccessor));
+          .forEach( uData =>  uData[0].set(uniformAccessor, figure, viewport));
       };
 
     };
@@ -320,3 +321,4 @@ export function getBuilder(params, scene, driver) {
   };
 
 }
+

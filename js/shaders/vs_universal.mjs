@@ -13,82 +13,101 @@ export function getBuilder(params, scene, driver) {
       name: 'a_vertexPosition4',
       type: UniformTypes.vec4,
       componentsCount: 3,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'positions'
     },
     a_vertexPosition2: {
       name: 'a_vertexPosition2',
       type: UniformTypes.vec2,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'positions'
     },
     a_vertexNormal: {
       name: 'a_vertexNormal',
       type: UniformTypes.vec3,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'normals'
     },
     a_vertexDiffuseColor: {
       name: 'a_vertexDiffuseColor',
       type: UniformTypes.vec4,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'diffuseColors'
     },
     a_vertexSpecularColor: {
       name: 'a_vertexSpecularColor',
       type: UniformTypes.vec3,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'specularColors'
     },
     a_vertexBrilliance: {
       name: 'a_vertexBrilliance',
       type: UniformTypes.float,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'brilliances'
     },
     a_vertexRadiance: {
       name: 'a_vertexRadiance',
       type: UniformTypes.vec3,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'radianceColors'
     },
     a_diffuseTexturePosition: {
       name: 'a_diffuseTexturePosition',
       type: UniformTypes.vec2,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'diffuseTexturePositions'
     },
     a_specularTexturePosition: {
-      name: 'a_diffuseTexturePosition',
+      name: 'a_specularTexturePosition',
       type: UniformTypes.vec2,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'specularTexturePositions'
     },
     a_brillianceTexturePosition: {
       name: 'a_brillianceTexturePosition',
       type: UniformTypes.vec2,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'brillianceTexturePositions'
     },
     a_radianceTexturePosition: {
       name: 'a_radianceTexturePosition',
       type: UniformTypes.vec2,
-      kind: ShaderVarKind.attribute
+      kind: ShaderVarKind.attribute,
+      bufferWrapperName: 'radianceTexturePositions'
     },
     u_worldViewProjectionMatrix3: {
       name: 'u_worldViewProjectionMatrix3',
       type: UniformTypes.mat3,
-      kind: ShaderVarKind.uniform
+      kind: ShaderVarKind.uniform,
+      set: (uniformAccessor, figure, viewport, pickPoint) => {
+        uniformAccessor.setUniform(ShaderVars.u_worldViewProjectionMatrix3, figure.getFullProjectTransform(viewport, pickPoint));
+      }
     },
     u_worldViewProjectionMatrix4: {
       name: 'u_worldViewProjectionMatrix4',
       type: UniformTypes.mat4,
-      kind: ShaderVarKind.uniform
+      kind: ShaderVarKind.uniform,
+      set: (uniformAccessor, figure, viewport, pickPoint) => {
+        uniformAccessor.setUniform(ShaderVars.u_worldViewProjectionMatrix4, figure.getFullProjectTransform(viewport, pickPoint));
+      }
     },
     u_worldMatrixInvTransp: {
       name: 'u_worldMatrixInvTransp',
       type: UniformTypes.mat4,
-      kind: ShaderVarKind.uniform
+      kind: ShaderVarKind.uniform,
+      set: (uniformAccessor, figure) => {
+        let worldMatrix = figure.getWorldTransform();
+        uniformAccessor.setUniform(ShaderVars.u_worldMatrixInvTransp, figure.getWorldTransformInvTransp());
+      }
     },
     u_worldMatrix: {
       name: 'u_worldMatrix',
       type: UniformTypes.mat4,
-      kind: ShaderVarKind.uniform
-    },
-    u_cameraPosition: {
-      name: 'u_cameraPosition',
-      type: UniformTypes.vec3,
-      kind: ShaderVarKind.uniform
+      kind: ShaderVarKind.uniform,
+      set: (uniformAccessor, figure) => {
+        uniformAccessor.setUniform(ShaderVars.u_worldMatrix, figure.getWorldTransform());
+      }
     },
     v_normal: {
       name: 'v_normal',
@@ -139,18 +158,13 @@ export function getBuilder(params, scene, driver) {
       name: 'v_surfacePosition',
       type: UniformTypes.vec3,
       kind: ShaderVarKind.varying
-    },
-    v_cameraPosition: {
-      name: 'v_cameraPosition',
-      type: UniformTypes.vec3,
-      kind: ShaderVarKind.varying
     }
   };
 
   return function () {
-    var config = parseParams(params || '');
-    params = params.split(',');
-    var mode = params[0];
+    var config = parseParams(params || ''),
+      standartShaderScope, pickShaderScope,
+      shaderUniforms, shaderUniformsArrays, shaderAttributes, pickUniforms, pickUniformArrays, pickAattributes;
 
     this.getBody = function () {
       let res = new ShaderBuilder();
@@ -163,7 +177,6 @@ export function getBuilder(params, scene, driver) {
         res.addInstruction('gl_Position =', v.u_worldViewProjectionMatrix4, ' * ', v.a_vertexPosition4);
         if (config.mode === MODE_3D_WITH_LIGHT) {
           res.addInstruction(v.v_surfacePosition, ' = (', v.u_worldMatrix, ' * ', v.a_vertexPosition4, ').xyz');
-          res.addInstruction(v.v_cameraPosition, ' = ', v.u_cameraPosition);
           res.addInstruction(v.v_normal, ' = mat3( ', v.u_worldMatrixInvTransp , ' ) * ', v.a_vertexNormal);
         }
       }
@@ -188,120 +201,99 @@ export function getBuilder(params, scene, driver) {
         res.addInstruction(v.v_radianceTexturePosition, '=', v.a_radianceTexturePosition);
       }
 
+      standartShaderScope = createShaderScope(res);
+
+      return res.build();
+    };
+
+
+    this.getPickBody = function () {
+      let res = new ShaderBuilder(),
+        v = ShaderVars;
+      if (config.mode === MODE_2D) {
+        res.addInstruction('gl_Position =',
+          'vec4( ( ', v.u_worldViewProjectionMatrix3, ' * vec3(', v.a_vertexPosition2, ', 1) ).xy, 0, 1 )');
+
+      } else if (config.mode === MODE_3D || config.mode === MODE_3D_WITH_LIGHT) {
+        res.addInstruction('gl_Position =', v.u_worldViewProjectionMatrix4, ' * ', v.a_vertexPosition4);
+      }
+
+      pickShaderScope = createShaderScope(res, true);
+
       return res.build();
     };
 
     this.init = function (programWrapper) {
 
-      const bufferUtils = new BufferUtils(driver.getGl(), programWrapper.program),
-        uniformAccessor = new UniformAccessor(driver.getGl(), programWrapper.program);
+      initShaderScope(standartShaderScope, programWrapper.program);
+      initShaderScope(pickShaderScope, programWrapper.pickProgram);
 
-      if (config.mode === MODE_2D) {
-        bufferUtils.initAttribute(ShaderVars.a_vertexPosition2);
-        uniformAccessor.initUniform(ShaderVars.u_worldViewProjectionMatrix3);
-      } else if (config.mode === MODE_3D || config.mode === MODE_3D_WITH_LIGHT) {
-        bufferUtils.initAttribute(ShaderVars.a_vertexPosition4);
-        uniformAccessor.initUniform(ShaderVars.u_worldViewProjectionMatrix4);
-        if (config.mode === MODE_3D_WITH_LIGHT) {
-          bufferUtils.initAttribute(ShaderVars.a_vertexNormal);
-          uniformAccessor.initUniform(ShaderVars.u_worldMatrix);
-          uniformAccessor.initUniform(ShaderVars.u_worldMatrixInvTransp);
-          uniformAccessor.initUniform(ShaderVars.u_cameraPosition);
-        }
-      }
+      programWrapper.initBuffers = createInitBuffers(standartShaderScope);
+      programWrapper.setBuffers = createSetBuffers(standartShaderScope);
+      programWrapper.setPickBuffers = createSetBuffers(pickShaderScope);
+      programWrapper.fillVertUniforms = createFillVertUniforms(standartShaderScope);
+      programWrapper.fillPickVertUniforms = createFillVertUniforms(pickShaderScope);
 
-      if (config.diffuseColorSource === COLOR_SOURCE_VERTEX) {
-        bufferUtils.initAttribute(ShaderVars.a_vertexDiffuseColor)
-      } else if (config.diffuseColorSource === COLOR_SOURCE_TEXTURE) {
-        bufferUtils.initAttribute(ShaderVars.a_diffuseTexturePosition)
-      }
+    };
 
-      if (config.specularColorSource === COLOR_SOURCE_VERTEX) {
-        bufferUtils.initAttribute(ShaderVars.a_vertexSpecularColor)
-      } else if (config.specularColorSource === COLOR_SOURCE_TEXTURE) {
-        bufferUtils.initAttribute(ShaderVars.a_specularTexturePosition)
-      }
+    function createShaderScope(shaderBuilder, pick) {
+      return {
+        uniforms: shaderBuilder.getVars().filter(v => v.kind === ShaderVarKind.uniform),
+        attributes: shaderBuilder.getVars().filter(v => v.kind === ShaderVarKind.attribute),
+        uniformsArrays: shaderBuilder.getArrVars().filter(varData => varData[0].kind === ShaderVarKind.uniform),
+        pick: pick
+      };
+    }
 
-      programWrapper.initBuffers = function (buffersData) {
+    function initShaderScope(scope, shaderProgramm) {
+      scope.bufferUtils = new BufferUtils(driver.getGl(), shaderProgramm);
+      scope.uniformAccessor = new UniformAccessor(driver.getGl(), shaderProgramm);
+
+      scope.uniforms.forEach(u => scope.uniformAccessor.initUniform(u));
+      scope.attributes.forEach(a => scope.bufferUtils.initAttribute(a));
+      scope.uniformsArrays.forEach(uData => {for (let i = 0; i < uData[1]; i++) scope.uniformAccessor.initUniform(uData[0],i)});
+    }
+
+    function createInitBuffers(scope) {
+      return function (buffersData) {
         if (buffersData.combinedBuffer) {
 
         } else {
-          bufferUtils.createBufferWrapper(buffersData.positions, buffersData.useType);
-          if (config.diffuseColorSource === COLOR_SOURCE_VERTEX) {
-            bufferUtils.createBufferWrapper(buffersData.diffuseColors, buffersData.useType);
-          } else if (config.diffuseColorSource === COLOR_SOURCE_TEXTURE) {
-            bufferUtils.createBufferWrapper(buffersData.diffuseTexturePositions, buffersData.useType);
-          }
-          if (config.specularColorSource === COLOR_SOURCE_VERTEX) {
-            bufferUtils.createBufferWrapper(buffersData.specularColors, buffersData.useType);
-          } else if (config.specularColorSource === COLOR_SOURCE_TEXTURE) {
-            bufferUtils.createBufferWrapper(buffersData.specularTexturePositions, buffersData.useType);
-          }
-          if (config.mode === MODE_3D_WITH_LIGHT) {
-            bufferUtils.createBufferWrapper(buffersData.normals, buffersData.useType)
-          }
+          scope.attributes.forEach(a => {
+            scope.bufferUtils.createBufferWrapper(buffersData[a.bufferWrapperName], buffersData.useType);
+          });
         }
         if (buffersData.indexes != null) {
-          bufferUtils.createIndexBufferWrapper(buffersData.indexes, buffersData.useType);
+          scope.bufferUtils.createIndexBufferWrapper(buffersData.indexes, buffersData.useType);
         }
       };
+    }
 
-      programWrapper.setBuffers = function (buffersData) {
+    function createSetBuffers(scope) {
+      return function (buffersData) {
         if (buffersData.combinedBuffer) {
 
         } else {
-          if (config.mode === MODE_2D) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexPosition2, buffersData.positions);
-          } else if (config.mode === MODE_3D || config.mode === MODE_3D_WITH_LIGHT) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexPosition4, buffersData.positions);
-            if (config.mode === MODE_3D_WITH_LIGHT) {
-              bufferUtils.setBuffer(ShaderVars.a_vertexNormal, buffersData.normals);
-            }
-          }
-
-          if (config.diffuseColorSource === COLOR_SOURCE_VERTEX) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexDiffuseColor, buffersData.diffuseColors);
-          } else if (config.diffuseColorSource === COLOR_SOURCE_TEXTURE) {
-            bufferUtils.setBuffer(ShaderVars.a_diffuseTexturePosition, buffersData.diffuseTexturePositions);
-          }
-
-          if (config.specularColorSource === COLOR_SOURCE_VERTEX) {
-            bufferUtils.setBuffer(ShaderVars.a_vertexSpecularColor, buffersData.specularColors);
-          } else if (config.specularColorSource === COLOR_SOURCE_TEXTURE) {
-            bufferUtils.setBuffer(ShaderVars.a_specularTexturePosition, buffersData.specularTexturePositions);
-          }
+          scope.attributes.forEach(a => {
+            scope.bufferUtils.setBuffer(a, buffersData[a.bufferWrapperName]);
+          });
         }
         if (buffersData.indexes != null) {
-          bufferUtils.setIndexBuffer(buffersData.indexes);
+          scope.bufferUtils.setIndexBuffer(buffersData.indexes);
           return buffersData.indexes.bufferWrapper.type;
         }
         return null;
       };
+    }
 
-      programWrapper.fillVertUniforms = function (figure, viewport) {
-        var worldMatrix = figure.getWorldTransform();
-        if (worldMatrix == null) {
-          if (config.mode === MODE_2D) {
-            worldMatrix = Mx3Util.IDENT;
-          } else if (config.mode === MODE_3D || config.mode === MODE_3D_WITH_LIGHT) {
-            worldMatrix = Mx4Util.IDENT;
-          }
-        }
-        if (config.mode === MODE_2D) {
-          uniformAccessor.setUniform(ShaderVars.u_worldViewProjectionMatrix3, worldMatrix);
-        } else if (config.mode === MODE_3D || config.mode === MODE_3D_WITH_LIGHT) {
-          if (config.mode === MODE_3D_WITH_LIGHT) {
-            uniformAccessor.setUniform(ShaderVars.u_worldMatrix, new Transform3dBuilder(worldMatrix).build());
-            uniformAccessor.setUniform(ShaderVars.u_worldMatrixInvTransp,
-              new Transform3dBuilder(worldMatrix).inverse().transponse().build());
-            uniformAccessor.setUniform(ShaderVars.u_cameraPosition, viewport.getCamera().getPosition());
-          }
-          uniformAccessor.setUniform(ShaderVars.u_worldViewProjectionMatrix4,
-            new Transform3dBuilder(worldMatrix).multiply(viewport.getVPBuilder().build()).build());
-        }
+    function createFillVertUniforms(scope) {
+      return function (figure, viewport, pickPoint) {
+        scope.uniforms
+          .forEach(u => u.set(scope.uniformAccessor, figure, viewport, scope.pick === true ? pickPoint : null));
+        scope.uniformsArrays
+          .forEach( uData =>  uData[0].set(scope.uniformAccessor, figure, viewport, scope.pick === true ? pickPoint : null));
       };
-
-    };
+    }
   }
 
 };

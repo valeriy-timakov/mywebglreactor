@@ -67,6 +67,11 @@ export function Transform3dBuilder(initialTransform) {
     return self;
   };
 
+  this.projectFrustum = function (left, right, bottom, top, near, far) {
+    result = Mx4Util.multiply(result, Mx4Util.frustum(left, right, bottom, top, near, far));
+    return self;
+  };
+
   this.lookTo = function(location, direction, up) {
     result = Mx4Util.multiply(result, Mx4Util.inverse( Mx4Util.lookTo(location, direction, up) ));
     return self;
@@ -122,7 +127,7 @@ export function Transform2DBuilder() {
   this.project = function(x0, y0, sizeX, sizeY) {
     result = Mx3Util.multiply(result, Mx3Util.projection(x0, y0, sizeX, sizeY));
     return self;
-  }
+  };
 }
 
 export const MxDefUtils = {
@@ -608,19 +613,6 @@ export const Mx4Util = {
     ];
   },
 
-  orthographic: function(left, right, bottom, top, near, far) {
-    return [
-      2 / (right - left), 0, 0, 0,
-      0, 2 / (top - bottom), 0, 0,
-      0, 0, 2 / (near - far), 0,
-
-      (left + right) / (left - right),
-      (bottom + top) / (bottom - top),
-      (near + far) / (near - far),
-      1
-    ];
-  },
-
   orientByDirection: function(direction) {
     let sb = direction[1],
       cb = Math.sqrt(1 + sb * sb),
@@ -633,16 +625,39 @@ export const Mx4Util = {
     ]);
   },
 
+  orthographic: function(left, right, bottom, top, near, far) {
+    return [
+      2 / (right - left),               0,                              0,                            0,
+      0,                                2 / (top - bottom),             0,                            0,
+      0,                                0,                              2 / (near - far),             0,
+      (left + right) / (left - right), (bottom + top) / (bottom - top), (near + far) / (near - far),  1
+    ];
+  },
+
 
   perspective: function(fieldOfViewInRadians, aspect, near, far) {
     var f = Math.tan( (Math.PI - fieldOfViewInRadians) / 2 );
     var rangeInv = 1.0 / (far - near);
 
     return [
-      f / aspect, 0, 0, 0,
-      0, f, 0, 0,
-      0, 0, (near + far) * rangeInv, 1,
-      0, 0, -2 * near * far * rangeInv, 0
+      f / aspect, 0, 0,                           0,
+      0,          f, 0,                           0,
+      0,          0, (near + far) * rangeInv,     1,
+      0,          0, -2 * near * far * rangeInv,  0
+    ];
+  },
+
+  frustum: function (left, right, bottom, top, near, far) {
+
+    let dx = right - left,
+      dy = top - bottom,
+      dz = far - near;
+
+    return [
+      2 * near / dx,        0,                  0,                    0,
+      0,                    2 * near / dy,      0,                    0,
+      (left + right) / dx, (top + bottom) / dy, (far + near) / dz,    1,
+      0,                    0,                  -2 * near * far / dz, 0
     ];
   },
 

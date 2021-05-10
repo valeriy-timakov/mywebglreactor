@@ -1,19 +1,23 @@
 
 import {Transform3dBuilder, Mx4Util, Vx3Utils} from './math_utils.mjs'
-import {Nameable} from "./utils.mjs";
+import {ChangeNotifier, Nameable} from "./utils.mjs";
 
 import {notNull, PositionHolder, DirectionReversedHolder} from './utils.mjs'
 
 function Camera(position, direction, up) {
+  var changeDelegate = {};
+  const self = this;
 
-  Object.assign(this, new PositionHolder(position));
-  Object.assign(this, new DirectionReversedHolder(direction));
+  Object.assign(this, new ChangeNotifier(changeDelegate));
+  Object.assign(this, new PositionHolder(position, changeDelegate, self));
+  Object.assign(this, new DirectionReversedHolder(direction, changeDelegate, self));
 
   if (up == null) up = [0, 1, 0];
   setUp(up);
 
   function setUp(value) {
     up = Vx3Utils.normalize(value);
+    changeDelegate.change(self, 'up', up);
   }
 
   this.getUp = () => up;
@@ -23,39 +27,43 @@ function Camera(position, direction, up) {
   };
 }
 
-function Projection(near, far, fieldOfViewVerticalRadians, aspect) {
+function Projection(near, far, fieldOfViewVerticalRadians) {
+
+  var changeDelegate = {};
+  const self = this;
+
+  Object.assign(this, new ChangeNotifier(changeDelegate));
+
   if (near == null) near = 0.5;
   if (far == null) far = 200;
   if (fieldOfViewVerticalRadians == null) fieldOfViewVerticalRadians = 1.1;
-  if (aspect == null) aspect = 1024 / 768;
 
   this.getNear = () => near;
   this.setNear = (value) => {
     notNull(value, 'projection near');
     near = value;
+    changeDelegate.change(self, 'near', near);
   };
 
   this.getFar = () => far;
   this.setFar = (value) => {
     notNull(value, 'projection far');
     far = value;
+    changeDelegate.change(self, 'far', far);
   };
 
   this.getFieldOfViewVerticalRadians = () => fieldOfViewVerticalRadians;
   this.setFieldOfViewVerticalRadians = (value) => {
     notNull(value, 'projection fieldOfViewVerticalRadians');
     fieldOfViewVerticalRadians = value;
-  };
-
-  this.getAspect = () => aspect;
-  this.setAspect = (value) => {
-    notNull(value, 'projection aspect');
-    aspect = value;
+    changeDelegate.change(self, 'fieldOfViewVerticalRadians', fieldOfViewVerticalRadians);
   };
 
 }
 
-function Viewport(name, camera, projection, rightHandledWorld) {
+function Viewport(name, camera, projection, rightHandledWorld, canvas) {
+
+  var version = 0;
 
   Object.assign(this, new Nameable(name));
 
@@ -63,16 +71,58 @@ function Viewport(name, camera, projection, rightHandledWorld) {
   if (projection == null) projection = new Projection();
   if (rightHandledWorld == null) rightHandledWorld = true;
 
-   this.getVPBuilder = function() {
-    var result = new Transform3dBuilder();
+  camera.addChangeListener(() => { version++; });
+  projection.addChangeListener(() => { version++; });
+
+  this.getVPBuilder = function(pickPoint) {
+
+    let result = new Transform3dBuilder();
     result.lookTo(camera.getPosition(), camera.getRevDirection(), camera.getUp());
     if (rightHandledWorld) {
       result.multiply(Mx4Util.IDENT_INVERSE_Z);
     }
-    result.projectPersp(projection.getFieldOfViewVerticalRadians(), projection.getAspect(), projection.getNear(),
+
+    let aspect;
+    if (canvas != null) {
+      aspect = canvas.width / canvas.height;
+    } else if (frameBuffer != null) {
+      aspect = frameBuffer.width / frameBuffer.height;
+    } else {
+      throw new Error("Viewport render context not set!");
+    }
+
+    if (pickPoint != null) {
+      const top = Math.tan(projection.getFieldOfViewVerticalRadians() * 0.5) * projection.getNear();
+      const bottom = -top;
+      const left = aspect * bottom;
+      const right = aspect * top;
+      const width = Math.abs(right - left);
+      const height = Math.abs(top - bottom);
+
+      const pixelX = pickPoint.x * canvas.width / canvas.clientWidth;
+      const pixelY = canvas.height - pickPoint.y * canvas.height / canvas.clientHeight - 1;
+
+      const subLeft = left + pixelX * width / canvas.width;
+      const subBottom = bottom + pixelY * height / canvas.height;
+      const subWidth = 1 / canvas.width;
+      const subHeight = 1 / canvas.height;
+
+      return  result.projectFrustum(
+        subLeft,
+        subLeft + subWidth,
+        subBottom,
+        subBottom + subHeight,
+       // left, right, bottom, top,
+        projection.getNear(),
+        projection.getFar());
+    }
+
+    return result.projectPersp(projection.getFieldOfViewVerticalRadians(), aspect, projection.getNear(),
       projection.getFar());
-    return result;
+
   };
+
+   this.getVersion = () => version;
 
   this.getCamera = () => camera;
 
@@ -80,7 +130,58 @@ function Viewport(name, camera, projection, rightHandledWorld) {
 
   this.setRightHandledWorld = function(value) {
     rightHandledWorld = value;
+    version++;
   };
+
+  var frameBuffer, pickBuffer;
+
+  this.setFrameBuffer = _frameBuffer => { frameBuffer = _frameBuffer;  };
+  this.setPickFrameBuffer = _pickBuffer => { pickBuffer = _pickBuffer;  };
+
+  this.refresh = (gl, pick) => {
+    if (canvas != null) {
+      if (pick === true) {
+        if (pickBuffer == null) throw new Error("Pick buffer is not set!");
+        gl.bindFramebuffer(gl.FRAMEBUFFER, pickBuffer);
+        gl.viewport(0, 0, pickBuffer.width, pickBuffer.height);
+      } else {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        resize();
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+    } else if (frameBuffer != null) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+      gl.viewport(0, 0, frameBuffer.width, frameBuffer.height);
+    } else {
+      throw new Error("Viewport render context not set!");
+    }
+  };
+
+  this.getPickBufferColor = (gl) => {
+    const data = new Uint8Array(4);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    return data;
+  };
+
+  this.getGlContext = () => {
+    var gl = canvas.getContext("webgl");
+    if (!gl) {
+      throw new Error("WebGL is not supported!");
+    }
+    return gl;
+  };
+
+  this.getCanvas = () => canvas;
+
+  function resize() {
+    var height = canvas.clientHeight * window.devicePixelRatio,
+      width = canvas.clientWidth * window.devicePixelRatio;
+    if (canvas.width  != width || canvas.height != height) {
+      canvas.width  = width;
+      canvas.height = height;
+    }
+  }
+
 }
 
 export { Camera, Projection, Viewport }

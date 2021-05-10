@@ -3,6 +3,7 @@
 import {WebglDriver} from './webgl_driver.mjs';
 import {Controls} from "./controles.mjs";
 import {Loader} from "./loaders/loader.mjs";
+import {Camera, Projection, Viewport} from "./viewport.mjs";
 
 
 var driver,
@@ -13,7 +14,12 @@ var driver,
 
 
 function run() {
-  driver = new WebglDriver(window.document.getElementById('c'));
+  let canvas = window.document.getElementById('c'),
+    mainCamera = new Camera([0, 0, 0], [0, 0, -1], [0, 1, 0]),
+    canvasViewport = new Viewport('main', mainCamera,
+      new Projection(0.5, 200, 1.1), true, canvas);
+  driver = new WebglDriver(canvasViewport);
+  currentViewportName = canvasViewport.getName();
 
   var wait = [];
 
@@ -21,6 +27,36 @@ function run() {
     textures.forEach(texture => { driver.initTexture(texture.name, texture.image) } );
     render();
   });
+
+
+  /* Controls.addKineticUnit('camera', {
+     initialPosition: mainCamera.getPosition(),
+     initialDirection: mainCamera.getRevDirection(),
+     initialUp: mainCamera.getUp(),
+     initialSpeed: 0.1,
+     acceleration: 0.01,
+     changeDirectionByKeySpeed: 0.1,
+     changeInclineSpeed: 0.1,
+     changeDirectionByMouseSpeed: 0.1,
+     forwardKey: 'KeyW',
+     backwardKey: 'KeyS',
+     rightKey: 'KeyD',
+     leftKey: 'KeyA',
+     upKey: 'KeyE',
+     downKey: 'KeyC',
+     fasterKey: 'KeyQ',
+     slowerKey: 'KeyZ',
+     directionRightKey: 'ArrowRight',
+     directionLeftKey: 'ArrowLeft',
+     directionUpKey: 'ArrowUp',
+     directionDownKey: 'ArrowDown',
+     rightInclineKey: 'PageDown',
+     leftInclineKey: 'Delete'
+   }, (state, position, direction, up) => {
+     mainCamera.setPosition(position);
+     mainCamera.setDirection(direction);
+     mainCamera.setUp(up);
+   });*/
 
   wait.push(
     Loader.loadScenes().then(scenes => {
@@ -42,15 +78,6 @@ function run() {
   );
 
   wait.push(
-    Loader.loadViewports().then( viewports => {
-      viewports.forEach(vp => {
-        driver.addViewport(vp);
-        currentViewportName = vp.getName();
-      } );
-    } )
-  );
-
-  wait.push(
     Loader.loadGraphicOjbects().then( loadedGraphicObjects=> {
 
       graphicObjects = loadedGraphicObjects;
@@ -65,8 +92,10 @@ function run() {
       graphicObjects
         .filter(graphicObject => graphicObject.frameBufferData != null)
         .forEach(graphicObject => {
-          let fbData = graphicObject.frameBufferData;
-          driver.initFrameBuffer(fbData.name, fbData.textureWidth, fbData.textureHeight);
+          let fbData = graphicObject.frameBufferData,
+            fbViewport = new Viewport(fbData.name, new Camera([0, 0, -20], [0, 0, 1], [1, 1, 0]),
+            new Projection(0.4, 1000, 2.1));
+          driver.addFrameBufferViewport(fbViewport, fbData.textureWidth, fbData.textureHeight);
         });
 
       return driver.geometriesInited();
@@ -77,6 +106,21 @@ function run() {
   Promise.all(wait).then(() => {
     ready = true;
     render();
+    document.body.addEventListener('mousemove', function(e)  {
+      let canvas = canvasViewport.getCanvas(),
+        rect = canvas.getBoundingClientRect(),
+        mouseX = e.clientX - rect.left,
+        mouseY = e.clientY - rect.top,
+        pickPoint = {
+          x: mouseX * canvas.width / canvas.clientWidth,
+          y: mouseY * canvas.height / canvas.clientHeight
+        };
+      let selId = driver.pick(
+        graphicObjects
+          .map(graphicObject => graphicObject.getFigures())
+          .flat(), pickPoint);
+      console.log(selId)
+    });
   });
 
   Controls.setUpdateFinishedListener(() => { render(); });
@@ -93,17 +137,16 @@ function render() {
           driver.setCurrentScene(fbData.sceneName);
         }
         if (fbData.viewportName != null) {
-          driver.setCurrentViewport(fbData.viewportName);
+          driver.setCurrentViewport(fbData.name);
         }
         driver.render(
           graphicObjects
             .filter(tmpGraphicObject => tmpGraphicObject != graphicObject)
             .map(tmpGraphicObject => tmpGraphicObject.getFigures())
-            .flat(),
-          fbData.name);
+            .flat());
       });
     driver.setCurrentScene(currentSceneName);
-    driver.setCurrentViewport(currentViewportName);
+    driver.setMainViewport();
     driver.render(
       graphicObjects
         .map(graphicObject => graphicObject.getFigures())

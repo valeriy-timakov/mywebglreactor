@@ -1,5 +1,5 @@
 
-import {Vx3Utils} from './math_utils.mjs'
+import {Transform3dBuilder, Vx3Utils} from './math_utils.mjs'
 
 export function notNull(value, name) {
   if (value == null) {
@@ -19,13 +19,16 @@ export function Identifiable(id) {
   this.getId = () => id;
 }
 
-export function DirectionReversedHolder(direction) {
+export function DirectionReversedHolder(direction, changeDelegate, self) {
   var reversedDirection;
   if (direction == null) direction = [0, 0, -1];
   setRevDirection(direction);
 
   function setRevDirection(value) {
     reversedDirection = Vx3Utils.normalize(Vx3Utils.multiply(-1, value));
+    if (changeDelegate != null) {
+      changeDelegate.change(self, 'reversedDirection', reversedDirection);
+    }
   }
 
   this.setDirection = (value) => {
@@ -35,7 +38,7 @@ export function DirectionReversedHolder(direction) {
   this.getRevDirection = () => reversedDirection;
 }
 
-export function SizeHolder(size) {
+export function SizeHolder(size, changeDelegate, self) {
   if (size == null) size = 1;
   setSize(size);
 
@@ -45,6 +48,9 @@ export function SizeHolder(size) {
       throw Error('Cannot set size to not positive value!');
     }
     size = value;
+    if (changeDelegate != null) {
+      changeDelegate.change(self, 'size', size);
+    }
   }
 
   this.setSize = (value) => {
@@ -53,16 +59,103 @@ export function SizeHolder(size) {
   this.getSize = () => size;
 }
 
-export function PositionHolder(position) {
+export function PositionHolder(position, changeDelegate, self) {
 
   if (position == null) position = [0, 0, 0];
 
   this.setPosition = (value) => {
     notNull(value, 'position');
     position = value;
+    if (changeDelegate != null) {
+      changeDelegate.change(self, 'position', position);
+    }
   };
   this.getPosition = () => position;
 
+}
+
+export function TransformCotained(transformationWrapper) {
+
+  var worldTransform = null,
+    lastWorldTransformVersion = null,
+    worldTransformInvTransp = null,
+    fullProjectionDataMap = {};
+
+  const self = this;
+  this.getWorldTransform = function () {
+    if (worldTransform == null || lastWorldTransformVersion !== transformationWrapper.getVersion()) {
+      worldTransform = transformationWrapper.getWorldTransform();
+      lastWorldTransformVersion = transformationWrapper.getVersion();
+      if (typeof worldTransform.build == 'function') {
+        worldTransform = worldTransform.build();
+      }
+    }
+    return worldTransform;
+  };
+
+  this.getFullProjectTransform = function (viewport, pickPoint) {
+    let fullProjectionData = fullProjectionDataMap[viewport.getName()];
+    if (fullProjectionData == null) {
+      fullProjectionData = {};
+      fullProjectionDataMap[viewport.getName()] = fullProjectionData;
+    }
+    if (pickPoint != null) {
+      return new Transform3dBuilder(self.getWorldTransform())
+        .multiply(viewport.getVPBuilder(pickPoint).build()).build();
+    }
+    if (
+      fullProjectionData.transform == null ||
+      fullProjectionData.transformVersion !== transformationWrapper.getVersion() ||
+      fullProjectionData.viewportVersion !== viewport.getVersion()
+    ) {
+      fullProjectionData.transform = new Transform3dBuilder(self.getWorldTransform())
+        .multiply(viewport.getVPBuilder().build()).build()
+      fullProjectionData.viewportVersion = viewport.getVersion();
+      fullProjectionData.transformVersion = transformationWrapper.getVersion();
+    }
+    return fullProjectionData.transform;
+  };
+
+  this.getFullProjectPickTransform = function (viewport) {
+
+  };
+
+  this.getWorldTransformInvTransp = function () {
+    if (worldTransformInvTransp == null ||lastWorldTransformVersion !== transformationWrapper.getVersion()) {
+      worldTransformInvTransp = new Transform3dBuilder(self.getWorldTransform()).inverse().transponse().build();
+    }
+    return worldTransformInvTransp;
+  };
+
+}
+
+export function ChangeNotifier(delegate, silentListenerChash) {
+
+  var changeListeners = new Set();
+
+  this.addChangeListener = (listener) => {
+    changeListeners.add(listener);
+  };
+
+  this.removeChangeListener = (listener) => {
+    changeListeners.delete(listener);
+  };
+
+  delegate.change = () => {
+    if (silentListenerChash === true) {
+      changeListeners.forEach(listener => {
+        try {
+          listener(arguments);
+        } catch (e) {
+          console.error("Change listener chash! " + e);
+        };
+      });
+    } else {
+      changeListeners.forEach(listener => {
+        listener(arguments);
+      });
+    }
+  };
 }
 
 //https://stackoverflow.com/questions/3115982/how-to-check-if-two-arrays-are-equal-with-javascript

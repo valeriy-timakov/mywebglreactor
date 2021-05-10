@@ -7,47 +7,11 @@ import {Transform3dBuilder, Transform2DBuilder} from '../math_utils.mjs'
 import {Controls} from '../controles.mjs'
 import {Camera, Projection, Viewport} from '../viewport.mjs'
 import {PointLight, Scene, Spotlight} from "../scene.mjs";
-import {Nameable} from "../utils.mjs";
+import {Nameable, TransformCotained} from "../utils.mjs";
 import {log} from "../debug_utils.mjs";
 
 
 const Loader = {
-  loadViewports: function() {
-    let mainCamera = new Camera([0, 0, 0], [0, 0, -1], [0, 1, 0]);
-   /* Controls.addKineticUnit('camera', {
-      initialPosition: mainCamera.getPosition(),
-      initialDirection: mainCamera.getRevDirection(),
-      initialUp: mainCamera.getUp(),
-      initialSpeed: 0.1,
-      acceleration: 0.01,
-      changeDirectionByKeySpeed: 0.1,
-      changeInclineSpeed: 0.1,
-      changeDirectionByMouseSpeed: 0.1,
-      forwardKey: 'KeyW',
-      backwardKey: 'KeyS',
-      rightKey: 'KeyD',
-      leftKey: 'KeyA',
-      upKey: 'KeyE',
-      downKey: 'KeyC',
-      fasterKey: 'KeyQ',
-      slowerKey: 'KeyZ',
-      directionRightKey: 'ArrowRight',
-      directionLeftKey: 'ArrowLeft',
-      directionUpKey: 'ArrowUp',
-      directionDownKey: 'ArrowDown',
-      rightInclineKey: 'PageDown',
-      leftInclineKey: 'Delete'
-    }, (state, position, direction, up) => {
-      mainCamera.setPosition(position);
-      mainCamera.setDirection(direction);
-      mainCamera.setUp(up);
-    });*/
-    return Promise.resolve( [
-      new Viewport('back', new Camera([0, 0, -20], [0, 0, 1], [1, 1, 0]),
-        new Projection(0.1, 1000, 2.7, 8/6)),
-      new Viewport('main', mainCamera, new Projection(0.5, 200, 1.1, 8/6), true)
-    ]);
-  },
   loadGraphicOjbects: function() {
       return Promise.resolve([
         new GraphicObject1(1),
@@ -105,18 +69,23 @@ function GraphicObject1(name) {
     textureHeight: 600,
     viewportName: 'back'
   };
-  g3.diffuseTextureName = fbName;
+  g3.diffuseTextureName = 'pick';
+
+  var g4 = pm(figure3, 0, -0.9);
+  g4.diffuseTextureName = 'tst';
 
   var figures = [
     pm(figure1),
     pm(figure2, 0, 0, null, null, null, true),
     pm(figure2, 0, 100, null, null, null, true),
-    pm(figure3, 0, -0.9),
+    g4,
     g3
   ];
   this.getFigures = () => figures;
 }
 function GraphicObject2(name) {
+
+  var transform, version = 0;
 
   Object.assign(this, new Nameable(name));
 
@@ -125,17 +94,24 @@ function GraphicObject2(name) {
   Controls.addListener(function(state) {
     transformGeom2(g5, state, 0, 0, -8);
   });
+  Object.assign(g5, new TransformCotained({
+    getWorldTransform: () => transform,
+    getVersion: () => version
+  }));
+  g5.name = name + '_cube';
 
   function transformGeom2(geom, state, x, y, z) {
-    var bt3 = new Transform3dBuilder();
-    bt3.rotateX(state.getY() * 2 * Math.PI / 300);
-    bt3.rotateY(state.getX() * 2 * Math.PI / 300);
-    bt3.move(x, y, z);
-    geom.transform = bt3;
+    transform = new Transform3dBuilder();
+    transform.rotateX(state.getY() * 2 * Math.PI / 300);
+    transform.rotateY(state.getX() * 2 * Math.PI / 300);
+    transform.move(x, y, z);
+    version++;
   }
   this.getFigures = () => [g5];
 }
 function GraphicObject4(name, x, y) {
+
+  var transform, version = 0;
 
   Object.assign(this, new Nameable(name));
 
@@ -144,36 +120,50 @@ function GraphicObject4(name, x, y) {
   Controls.addListener(function(state) {
     transformGeom2(g5, state, x, y, -7);
   });
+  Object.assign(g5, new TransformCotained({
+    getWorldTransform: () => transform,
+    getVersion: () => version
+  }));
+  g5.name = name + '_cube';
 
   function transformGeom2(geom, state, x, y, z) {
-    var bt3 = new Transform3dBuilder();
-    bt3.rotateX(state.getY() * 2 * Math.PI / 300);
-    bt3.rotateY(state.getX() * 2 * Math.PI / 300);
-    bt3.move(x, y, z);
-    geom.transform = bt3;
+    transform = new Transform3dBuilder();
+    transform.rotateX(state.getY() * 2 * Math.PI / 300);
+    transform.rotateY(state.getX() * 2 * Math.PI / 300);
+    transform.move(x, y, z);
+    version++;
   }
   this.getFigures = () => [g5];
 }
 function GraphicObject3(name) {
 
-  Object.assign(this, new Nameable(name));
+  var transform, version = 0;
 
+  Object.assign(this, new Nameable(name));
   var g7 = createGeomItem(sphere);
   transformGeom3(g7, Controls.getState(), -1.7, -1.5, -5);
   Controls.addListener(function(state) {
     transformGeom3(g7, state, -1.7, -1.5);
   });
+  Object.assign(g7, new TransformCotained({
+    getWorldTransform: () => transform,
+    getVersion: () => version
+  }));
+
+  g7.name = name + '_sphere';
 
   function transformGeom3(geom, state, x, y) {
-    var bt3 = new Transform3dBuilder();
-    bt3.move(x, y, state.getZ()/100);
-    log('v_z', state.getZ()/100)
-    geom.transform = bt3;
+    transform = new Transform3dBuilder();
+    transform.move(x, y, state.getZ()/100);
+    version++;
+    log('v_z', state.getZ()/100);
   }
 
   this.getFigures = () => [g7];
 }
 function GraphicObject5(name) {
+
+  var transform, version = 0;
 
   Object.assign(this, new Nameable(name));
 
@@ -182,12 +172,18 @@ function GraphicObject5(name) {
   Controls.addListener(function(state) {
     transformGeom3(g7, state, -1.7, 1.7);
   });
+  Object.assign(g7, new TransformCotained({
+    getWorldTransform: () => transform,
+    getVersion: () => version
+  }));
+  g7.name = name + '_sphere';
+  g7.id = 12364;
 
   function transformGeom3(geom, state, x, y) {
-    var bt3 = new Transform3dBuilder();
-    bt3.move(x, y, state.getZ()/100);
-    log('v_z', state.getZ()/100)
-    geom.transform = bt3;
+    transform = new Transform3dBuilder();
+    transform.move(x, y, state.getZ()/100);
+    version++;
+    log('v_z', state.getZ()/100);
   }
 
   this.getFigures = () => [g7];
@@ -222,12 +218,7 @@ var figure1 = {
         normalized: true,
         type: 'u_byte'
       }
-    },
-    transform: {},
-    getWorldTransform: function() {
-      return this.transform;
     }
-
   },
   figure2 = {
     primitiveType: 'TRIANGLES',
@@ -251,10 +242,6 @@ var figure1 = {
         b: 0.9,
         a: 1
       }
-    },
-    transform: {},
-    getWorldTransform: function() {
-      return this.transform;
     }
   },
   figure3 = {
@@ -282,11 +269,6 @@ var figure1 = {
         type: 'float'
 
       }
-    },
-    diffuseTextureName: 'tst',
-    transform: {},
-    getWorldTransform: function() {
-      return this.transform;
     }
   };
 
@@ -310,7 +292,7 @@ function pm(geom, dx, dy, angle, sx, sy, project) {
   if (project) {
     t.project(1, 1, 600, 600);
   }
-  item.transform = t.build();
+  item.getFullProjectTransform = () => t.build();
   return item;
 }
 

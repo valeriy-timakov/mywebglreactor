@@ -166,19 +166,25 @@ export function UniformAccessor(gl, program) {
     }
   }
 
-  return {
-    initUniform: function(shaderVar, arrayPosition) {
-      let fullName = getFullName(shaderVar, arrayPosition);
-      let components = shaderVar.type.components;
-      if (components == null) {
-        uniformLocations[fullName] = gl.getUniformLocation(program, fullName);
-      } else {
-        for (let i in components) {
-          let componentName = fullName + '.' + components[i].name;
-          uniformLocations[componentName] = gl.getUniformLocation(program, componentName);
-        }
+
+  function initUniform(shaderVar, arrayPosition) {
+    let fullName = getFullName(shaderVar, arrayPosition);
+    let components = shaderVar.type.components;
+    if (components == null) {
+      uniformLocations[fullName] = gl.getUniformLocation(program, fullName);
+    } else {
+      for (let i in components) {
+        let componentName = fullName + '.' + components[i].name;
+        uniformLocations[componentName] = gl.getUniformLocation(program, componentName);
       }
-    },
+    }
+  }
+
+  return {
+    initUniform: initUniform,
+    /*initUniforms: function (uniforms) {
+
+    }*/
     setUniform: function(shaderVar, value, arrayPosition) {
       let fullName = getFullName(shaderVar, arrayPosition);
       let components = shaderVar.type.components;

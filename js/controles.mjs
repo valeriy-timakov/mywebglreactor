@@ -146,15 +146,15 @@ function change() {
   }
 }
 
-document.body.onmousedown = function () {
+document.body.addEventListener('mousedown', function () {
   down = true;
-};
+});
 
-document.body.onmouseup = function () {
+document.body.addEventListener('mouseup', function () {
   down = false;
-};
+});
 
-document.body.onmousemove = function(e)  {
+document.body.addEventListener('mousemove', function(e)  {
   let changed = false;
   if (down) {
     state.x += e.movementX;
@@ -168,7 +168,7 @@ document.body.onmousemove = function(e)  {
   if (changed) {
     change();
   }
-};
+});
 
 window.setInterval(function (){
 
@@ -194,22 +194,22 @@ window.setInterval(function (){
   }
 }, 10);
 
-document.body.onwheel = function(e) {
+document.body.addEventListener('wheel', function(e) {
   state.w += e.deltaX;
   state.v += e.deltaZ;
   state.z += e.deltaY;
   change();
-};
+});
 
-document.body.onkeydown = function (e) {
+document.body.addEventListener('keydown', function (e) {
   keysDown.add(e.code);
   for (let name in kineticUnits) {
     kineticUnits[name].keyDown(e.code);
   }
   change();
-};
+});
 
-document.body.onkeyup = function (e) {
+document.body.addEventListener('keyup', function (e) {
   let inrementedNames = incrementKeys[e.code]
   if (inrementedNames != null) {
     inrementedNames.forEach(name => {
@@ -233,7 +233,7 @@ document.body.onkeyup = function (e) {
     kineticUnits[name].keyUp(e.code);
   }
   change();
-};
+});
 
 function addListener(listener) {
   listeners.push(listener);

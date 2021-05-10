@@ -55,13 +55,11 @@ export function FiguresPrototypesRegistry() {
     hashCodeBuilder.add(stringHashCode(f.fragmentShaderName));
     hashCodeBuilder.add(stringHashCode(f.shadersParams));
     hashCodeBuilder.add(stringHashCode(f.buffersData.useType));
-    addBufferToHashCode(f.buffersData.indexes, hashCodeBuilder);
-    addBufferToHashCode(f.buffersData.positions, hashCodeBuilder);
-    addBufferToHashCode(f.buffersData.normals, hashCodeBuilder);
-    addBufferToHashCode(f.buffersData.diffuseColors, hashCodeBuilder);
-    addBufferToHashCode(f.buffersData.diffuseTexturePositions, hashCodeBuilder);
-    addBufferToHashCode(f.buffersData.specularColors, hashCodeBuilder);
-    addBufferToHashCode(f.buffersData.specularTexturePositions, hashCodeBuilder);
+    for (let name in f. buffersData) {
+      if (f.buffersData[name].data instanceof Array) {
+        addBufferToHashCode(f.buffersData[name], hashCodeBuilder);
+      }
+    }
     return hashCodeBuilder.get();
   }
 
@@ -72,17 +70,24 @@ export function FiguresPrototypesRegistry() {
   }
 
   function protorypesEqual(f1, f2) {
-    return f1.vertexShaderName === f2.vertexShaderName
-      && f1.fragmentShaderName === f2.fragmentShaderName
-      && f1.shadersParams === f2.shadersParams
-      && f1.buffersData.useType === f2.buffersData.useType
-      && buffersEqual(f1, f2, 'indexes')
-      && buffersEqual(f1, f2, 'positions')
-      && buffersEqual(f1, f2, 'normals')
-      && buffersEqual(f1, f2, 'diffuseColors')
-      && buffersEqual(f1, f2, 'diffuseTexturePositions')
-      && buffersEqual(f1, f2, 'specularColors')
-      && buffersEqual(f1, f2, 'specularTexturePositions');
+    let result = f1.vertexShaderName === f2.vertexShaderName
+        && f1.fragmentShaderName === f2.fragmentShaderName
+        && f1.shadersParams === f2.shadersParams
+        && f1.buffersData.useType === f2.buffersData.useType;
+    if (!result) {
+      return false;
+    }
+    let names = new Set();
+    addNames(names, f1.buffersData);
+    addNames(names, f2.buffersData);
+    names = Array.from(names);
+    for (let i in names) {
+      result &&= buffersEqual(f1, f2, names[i]);
+      if (!result) {
+        return false;
+      }
+    }
+    return result;
   }
 
   function buffersEqual(f1, f2, bufferName) {
@@ -91,5 +96,13 @@ export function FiguresPrototypesRegistry() {
     if (b1 === b2) return true;
     if (b1 == null || b2 == null) return false;
     return b1.type === b2.type && arraysEqual(b1.data, b2.data);
+  }
+
+  function addNames(names, buffersData) {
+    for (let name in buffersData) {
+      if (buffersData[name].data instanceof Array) {
+        names.add(name);
+      }
+    }
   }
 }
