@@ -10,7 +10,8 @@ var driver,
   graphicObjects,
   ready = false,
   currentSceneName,
-  currentViewportName;
+  currentViewportName,
+  objectsMap = new Map();
 
 
 function run() {
@@ -82,6 +83,12 @@ function run() {
 
       graphicObjects = loadedGraphicObjects;
 
+      graphicObjects.forEach(graphicObject => {
+        if (typeof graphicObject.getId == 'function' && graphicObject.getId() != null) {
+          objectsMap.set(graphicObject.getId(), graphicObject);
+        }
+      });
+
       graphicObjects
         .map(go => go.getFigures())
         .flat()
@@ -109,19 +116,36 @@ function run() {
     document.body.addEventListener('mousemove', function(e)  {
       let canvas = canvasViewport.getCanvas(),
         rect = canvas.getBoundingClientRect(),
-        mouseX = e.clientX - rect.left,
-        mouseY = e.clientY - rect.top,
-        pickPoint = {
-          x: mouseX * canvas.width / canvas.clientWidth,
-          y: mouseY * canvas.height / canvas.clientHeight
+        mouseX = (e.clientX - rect.left) / canvas.clientWidth,
+        mouseY = (e.clientY - rect.top) / canvas.clientHeight;
+      if (mouseY < 0 || mouseY > 1 || mouseX < 0 || mouseX > 1) {
+        return;
+      }
+      let pickPoint = {
+          x: mouseX * canvas.width,
+          y: mouseY * canvas.height
         };
       let selId = driver.pick(
         graphicObjects
           .map(graphicObject => graphicObject.getFigures())
-          .flat(), pickPoint);
-      console.log(selId)
+          .flat(), pickPoint),
+        selGraphicObject = objectsMap.get(selId);
+      if (selGraphicObject != null) {
+        selGraphicObject.setColor(selColor);
+        if (lastObject != null && lastObject != selGraphicObject) {
+          lastObject.resetColor();
+        }
+        lastObject = selGraphicObject;
+      } else if (lastObject != null) {
+        lastObject.resetColor();
+        lastObject = null;
+      }
+      render();
     });
   });
+
+  var lastObject = null;
+  const selColor = {r: 1, g: 0, b: 0, a: 1};
 
   Controls.setUpdateFinishedListener(() => { render(); });
 

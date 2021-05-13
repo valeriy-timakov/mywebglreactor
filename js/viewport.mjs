@@ -1,5 +1,5 @@
 
-import {Transform3dBuilder, Mx4Util, Vx3Utils} from './math_utils.mjs'
+import {Transform3dBuilder, Mx4Util, Vx3Utils, Mx3Util, Transform2DBuilder} from './math_utils.mjs'
 import {ChangeNotifier, Nameable} from "./utils.mjs";
 
 import {notNull, PositionHolder, DirectionReversedHolder} from './utils.mjs'
@@ -74,7 +74,13 @@ function Viewport(name, camera, projection, rightHandledWorld, canvas) {
   camera.addChangeListener(() => { version++; });
   projection.addChangeListener(() => { version++; });
 
-  this.getVPBuilder = function(pickPoint) {
+
+
+  this.getVPBuilder = function(is2d, pickPoint) {
+
+    if (is2d === true) {
+      return new Transform2DBuilder();
+    }
 
     let result = new Transform3dBuilder();
     result.lookTo(camera.getPosition(), camera.getRevDirection(), camera.getUp());
@@ -98,21 +104,31 @@ function Viewport(name, camera, projection, rightHandledWorld, canvas) {
       const right = aspect * top;
       const width = Math.abs(right - left);
       const height = Math.abs(top - bottom);
-
-      const pixelX = pickPoint.x * canvas.width / canvas.clientWidth;
-      const pixelY = canvas.height - pickPoint.y * canvas.height / canvas.clientHeight - 1;
-
-      const subLeft = left + pixelX * width / canvas.width;
+      const pixelY = canvas.height - pickPoint.y;
+      const subLeft = left + pickPoint.x * width / canvas.width;
       const subBottom = bottom + pixelY * height / canvas.height;
       const subWidth = 1 / canvas.width;
       const subHeight = 1 / canvas.height;
+
+      let persp = Mx4Util.perspective(projection.getFieldOfViewVerticalRadians(), aspect, projection.getNear(),
+        projection.getFar()),
+        frust = Mx4Util.frustum(left, right, bottom, top,
+          projection.getNear(),
+          projection.getFar()),
+      frus1 = Mx4Util.frustum(
+        subLeft,
+        subLeft + subWidth,
+        subBottom,
+        subBottom + subHeight,
+        projection.getNear(),
+        projection.getFar());
 
       return  result.projectFrustum(
         subLeft,
         subLeft + subWidth,
         subBottom,
         subBottom + subHeight,
-       // left, right, bottom, top,
+        //left, right, bottom, top,
         projection.getNear(),
         projection.getFar());
     }

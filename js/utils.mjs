@@ -1,5 +1,5 @@
 
-import {Transform3dBuilder, Vx3Utils} from './math_utils.mjs'
+import {Transform2DBuilder, Transform3dBuilder, Vx3Utils} from './math_utils.mjs'
 
 export function notNull(value, name) {
   if (value == null) {
@@ -74,59 +74,81 @@ export function PositionHolder(position, changeDelegate, self) {
 
 }
 
-export function TransformCotained(transformationWrapper) {
-
-  var worldTransform = null,
-    lastWorldTransformVersion = null,
-    worldTransformInvTransp = null,
-    fullProjectionDataMap = {};
-
-  const self = this;
-  this.getWorldTransform = function () {
-    if (worldTransform == null || lastWorldTransformVersion !== transformationWrapper.getVersion()) {
-      worldTransform = transformationWrapper.getWorldTransform();
-      lastWorldTransformVersion = transformationWrapper.getVersion();
-      if (typeof worldTransform.build == 'function') {
-        worldTransform = worldTransform.build();
-      }
-    }
-    return worldTransform;
+const TRANSFORM_MODE_2D = {
+    builder: Transform2DBuilder,
+    is2d: true
+  },
+  TRANSFORM_MODE_3D = {
+    builder: Transform3dBuilder,
+    is2d: false
   };
 
-  this.getFullProjectTransform = function (viewport, pickPoint) {
-    let fullProjectionData = fullProjectionDataMap[viewport.getName()];
-    if (fullProjectionData == null) {
-      fullProjectionData = {};
-      fullProjectionDataMap[viewport.getName()] = fullProjectionData;
-    }
-    if (pickPoint != null) {
-      return new Transform3dBuilder(self.getWorldTransform())
-        .multiply(viewport.getVPBuilder(pickPoint).build()).build();
-    }
-    if (
-      fullProjectionData.transform == null ||
-      fullProjectionData.transformVersion !== transformationWrapper.getVersion() ||
-      fullProjectionData.viewportVersion !== viewport.getVersion()
-    ) {
-      fullProjectionData.transform = new Transform3dBuilder(self.getWorldTransform())
-        .multiply(viewport.getVPBuilder().build()).build()
-      fullProjectionData.viewportVersion = viewport.getVersion();
-      fullProjectionData.transformVersion = transformationWrapper.getVersion();
-    }
-    return fullProjectionData.transform;
-  };
 
-  this.getFullProjectPickTransform = function (viewport) {
+export const TransformCotained3D = createTransformCotained(TRANSFORM_MODE_3D, function (self, transformationWrapper, state) {
 
-  };
+  var worldTransformInvTransp = null;
 
-  this.getWorldTransformInvTransp = function () {
-    if (worldTransformInvTransp == null ||lastWorldTransformVersion !== transformationWrapper.getVersion()) {
-      worldTransformInvTransp = new Transform3dBuilder(self.getWorldTransform()).inverse().transponse().build();
+  self.getWorldTransformInvTransp = function () {
+    if (worldTransformInvTransp == null ||state.getLastWorldTransformVersion() !== transformationWrapper.getVersion()) {
+      worldTransformInvTransp = new TRANSFORM_MODE_3D.builder(self.getWorldTransform()).inverse().transponse().build();
     }
     return worldTransformInvTransp;
   };
+});
 
+export const TransformCotained2D = createTransformCotained(TRANSFORM_MODE_2D);
+
+function createTransformCotained(mode, extender) {
+  const _mode = mode,
+    _extender = extender;
+  return function (transformationWrapper) {
+
+    var worldTransform = null,
+      lastWorldTransformVersion = null,
+      fullProjectionDataMap = {};
+
+    const self = this;
+
+    this.getWorldTransform = function () {
+      if (worldTransform == null || lastWorldTransformVersion !== transformationWrapper.getVersion()) {
+        worldTransform = transformationWrapper.getWorldTransform();
+        lastWorldTransformVersion = transformationWrapper.getVersion();
+        if (typeof worldTransform.build == 'function') {
+          worldTransform = worldTransform.build();
+        }
+      }
+      return worldTransform;
+    };
+
+    this.getFullProjectTransform = function (viewport, pickPoint) {
+      let fullProjectionData = fullProjectionDataMap[viewport.getName()];
+      if (fullProjectionData == null) {
+        fullProjectionData = {};
+        fullProjectionDataMap[viewport.getName()] = fullProjectionData;
+      }
+      if (pickPoint != null) {
+        return new _mode.builder(self.getWorldTransform())
+          .multiply(viewport.getVPBuilder(_mode.is2d, pickPoint).build()).build();
+      }
+      if (
+        fullProjectionData.transform == null ||
+        fullProjectionData.transformVersion !== transformationWrapper.getVersion() ||
+        fullProjectionData.viewportVersion !== viewport.getVersion()
+      ) {
+        fullProjectionData.transform = new _mode.builder(self.getWorldTransform())
+          .multiply(viewport.getVPBuilder(_mode.is2d).build()).build()
+        fullProjectionData.viewportVersion = viewport.getVersion();
+        fullProjectionData.transformVersion = transformationWrapper.getVersion();
+      }
+      return fullProjectionData.transform;
+    };
+
+    if (typeof _extender == 'function') {
+      _extender(this, transformationWrapper, {
+        getLastWorldTransformVersion: () =>lastWorldTransformVersion
+      });
+    }
+  }
 }
 
 export function ChangeNotifier(delegate, silentListenerChash) {

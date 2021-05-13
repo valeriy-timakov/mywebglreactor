@@ -4,9 +4,6 @@ import {createSphere, createSphereIndexed} from './figures_creator.mjs'
 let d = createSphere(1.7, 500);
 export const sphere = {
   primitiveType: 'TRIANGLE_STRIP',
-  getVertCount: function () {
-    return Math.floor( this.buffersData.positions.data.length / 3);
-  },
   vertexShaderName: 'UNIVERSAL',
   shadersParams: 'MODE=3D_WITH_LIGHT,DIFFUSE_COLORE_SOURCE=MATERIAL,SPECULAR_COLORE_SOURCE=MATERIAL,BRILLIANCE_SOURCE=MATERIAL,RADIANCE_SOURCE=MATERIAL',
   fragmentShaderName: 'UNIVERSAL',
@@ -23,8 +20,6 @@ export const sphere = {
   },
   depthTestEnabled: true,
   cullFace: null,
-  transform: {},
-  getWorldTransform: function () { return  this.transform; },
   getSpecularColor: () => { return {r: 1, g: 1, b: 1} },
   getDiffuseColor: () => {  return { r: 1, g: 0, b: 1, a: 1 } },
   getRadiance: () =>  { return {r: 0.1, g: 0, b: 0} },
@@ -56,10 +51,7 @@ export const sphereIndexed = {
   },
   depthTestEnabled: true,
   cullFace: null,
-  transform: {},
-  getWorldTransform: function () { return  this.transform; },
   getSpecularColor: () => { return {r: 1, g: 1, b: 1} },
-  getDiffuseColor: () => {  return { r: 1, g: 1, b: 1, a: 1 } },
   getRadiance: () =>  { return {r: 0, g: 0.2, b: 0} },
   getBrilliance: () => 7
 };

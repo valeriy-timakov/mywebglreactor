@@ -85,7 +85,7 @@ export function WebglDriver(mainViewport){
 
   this.addFrameBufferViewport = function(viewport, width, height) {
     self.addViewport(viewport);
-    const texture = createTexture(PICK_BUFF_TEXTURE_INIT_MAP),
+    const texture = createTexture(DEFAULT_TEXTURE_INIT_MAP),
       frameBuffer = gl.createFramebuffer();
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     textures[viewport.getName()] = texture;
@@ -97,20 +97,16 @@ export function WebglDriver(mainViewport){
   };
 
   function createPickFrameBuffer() {
-    const width = 800,
-      height = 600,
+    const width = 1,
+      height = 1,
       level = 0,
-      targetTexture  = createTexture(DEFAULT_TEXTURE_INIT_MAP),
+      targetTexture  = createTexture(PICK_BUFF_TEXTURE_INIT_MAP),
       depthBuffer = gl.createRenderbuffer(),
       frameBuffer = gl.createFramebuffer();
 
-
-    textures['pick'] = targetTexture
-
-
-    gl.texImage2D(gl.TEXTURE_2D, level, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     frameBuffer.width = width;
     frameBuffer.height = height;
+    gl.texImage2D(gl.TEXTURE_2D, level, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, targetTexture, 0);
 
@@ -297,7 +293,7 @@ export function WebglDriver(mainViewport){
   this.render = createRender(false);
   this.pick = createRender(true);
 
-  const pickNothingColog = {r: 0, g: 0, b: 0, a: 1};
+  const pickNothingColog = {r: 0, g: 0, b: 0, a: 0};
 
   function createRender(_pick) {
     const pick = _pick;
@@ -347,7 +343,7 @@ export function WebglDriver(mainViewport){
         }
         let offset = typeof figure.getOffset == "function" ? figure.getOffset() : 0;
         if (indexType != null) {
-          vertCount = vertCount != null ? vertCount : figure.indexes.data.length;
+          vertCount = vertCount != null ? vertCount : figure.buffersData.indexes.data.length;
           gl.drawElements(gl[figure.primitiveType], vertCount, indexType, offset);
         } else {
           vertCount = vertCount != null ? vertCount : Math.floor(figure.buffersData.positions.data.length / 3);
@@ -366,11 +362,11 @@ export function WebglDriver(mainViewport){
   }
 
   function encodeIdToColor(id) {
-    return [1, 1, 1, 1
-    /*  ((id >>  0) & 0xFF) / 0xFF,
+    return [
+      ((id >>  0) & 0xFF) / 0xFF,
       ((id >>  8) & 0xFF) / 0xFF,
       ((id >> 16) & 0xFF) / 0xFF,
-      ((id >> 24) & 0xFF) / 0xFF*/
+      ((id >> 24) & 0xFF) / 0xFF
     ];
   }
 

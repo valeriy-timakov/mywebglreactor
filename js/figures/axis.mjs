@@ -41,7 +41,6 @@ function copyVerts(figure, vertData) {
 }
 
 function FiguresGettersProvider(data) {
-  this.getVertCount = () => data.indexes.length;
   this.getWorldTransform = () => data.transformations;
   this.getSpecularColor = () => data.specularColor;
   this.getDiffuseColor = () => data.diffuseColor;

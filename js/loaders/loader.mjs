@@ -7,19 +7,19 @@ import {Transform3dBuilder, Transform2DBuilder} from '../math_utils.mjs'
 import {Controls} from '../controles.mjs'
 import {Camera, Projection, Viewport} from '../viewport.mjs'
 import {PointLight, Scene, Spotlight} from "../scene.mjs";
-import {Nameable, TransformCotained} from "../utils.mjs";
+import {Identifiable, Nameable, TransformCotained2D, TransformCotained3D} from "../utils.mjs";
 import {log} from "../debug_utils.mjs";
 
 
 const Loader = {
   loadGraphicOjbects: function() {
       return Promise.resolve([
-        new GraphicObject1(1),
-        new GraphicObject2(2),
-        new GraphicObject4(4, 1.8, -2.8),
-        new GraphicObject4(44, 3.8, -2.8),
+        new GraphicObject1(1, 215),
+        new GraphicObject2(2, 198),
+        new GraphicObject4(4, 1.8, -2.8, 699),
+        new GraphicObject4(44, 3.8, -2.8, 120),
         new GraphicObject3(3),
-        new GraphicObject5(5)
+        new GraphicObject5(5, 90, 249)
       ]);
   },
   loadScenes: function() {
@@ -57,48 +57,28 @@ export {Loader}
 
 
 
-function GraphicObject1(name) {
-
-  Object.assign(this, new Nameable(name));
-
-  let fbName = 'tst2';
-  var g3 = pm(figure3, -1, -1, 0/180*3.1416);
-  this.frameBufferData = {
-    name: fbName,
-    textureWidth: 800,
-    textureHeight: 600,
-    viewportName: 'back'
-  };
-  g3.diffuseTextureName = 'pick';
-
-  var g4 = pm(figure3, 0, -0.9);
-  g4.diffuseTextureName = 'tst';
-
-  var figures = [
-    pm(figure1),
-    pm(figure2, 0, 0, null, null, null, true),
-    pm(figure2, 0, 100, null, null, null, true),
-    g4,
-    g3
-  ];
-  this.getFigures = () => figures;
-}
-function GraphicObject2(name) {
+function GraphicObject2(name, id) {
 
   var transform, version = 0;
 
   Object.assign(this, new Nameable(name));
+  Object.assign(this, new Identifiable(id));
 
-  var g5 = createGeomItem(cube);
+  var g5 = Object.assign({}, cube),
+    originalColor =  { r: 0, g: 0, b: 1, a: 1 } , _color = originalColor;
+  g5.getDiffuseColor = () => _color;
+  this.setColor = color => { _color = color; };
+  this.resetColor = () => { _color = originalColor; };
   transformGeom2(g5, Controls.getState(), 0, 0, -8);
   Controls.addListener(function(state) {
     transformGeom2(g5, state, 0, 0, -8);
   });
-  Object.assign(g5, new TransformCotained({
+  Object.assign(g5, new TransformCotained3D({
     getWorldTransform: () => transform,
     getVersion: () => version
   }));
   g5.name = name + '_cube';
+  g5.id = id;
 
   function transformGeom2(geom, state, x, y, z) {
     transform = new Transform3dBuilder();
@@ -109,22 +89,28 @@ function GraphicObject2(name) {
   }
   this.getFigures = () => [g5];
 }
-function GraphicObject4(name, x, y) {
+function GraphicObject4(name, x, y, id) {
 
   var transform, version = 0;
 
   Object.assign(this, new Nameable(name));
+  Object.assign(this, new Identifiable(id));
 
-  var g5 = createGeomItem(cubeIdexed);
+  var g5 = Object.assign({}, cubeIdexed),
+    originalColor =  { r: 0, g: 0, b: 1, a: 1 } , _color = originalColor;
+  g5.getDiffuseColor = () => _color;
+  this.setColor = color => { _color = color; };
+  this.resetColor = () => { _color = originalColor; };
   transformGeom2(g5, Controls.getState(), x, y, -7);
   Controls.addListener(function(state) {
     transformGeom2(g5, state, x, y, -7);
   });
-  Object.assign(g5, new TransformCotained({
+  Object.assign(g5, new TransformCotained3D({
     getWorldTransform: () => transform,
     getVersion: () => version
   }));
   g5.name = name + '_cube';
+  g5.id = id;
 
   function transformGeom2(geom, state, x, y, z) {
     transform = new Transform3dBuilder();
@@ -140,12 +126,12 @@ function GraphicObject3(name) {
   var transform, version = 0;
 
   Object.assign(this, new Nameable(name));
-  var g7 = createGeomItem(sphere);
+  var g7 = Object.assign({}, sphere);
   transformGeom3(g7, Controls.getState(), -1.7, -1.5, -5);
   Controls.addListener(function(state) {
     transformGeom3(g7, state, -1.7, -1.5);
   });
-  Object.assign(g7, new TransformCotained({
+  Object.assign(g7, new TransformCotained3D({
     getWorldTransform: () => transform,
     getVersion: () => version
   }));
@@ -161,23 +147,28 @@ function GraphicObject3(name) {
 
   this.getFigures = () => [g7];
 }
-function GraphicObject5(name) {
+function GraphicObject5(name, id) {
 
   var transform, version = 0;
 
   Object.assign(this, new Nameable(name));
+  Object.assign(this, new Identifiable(id));
 
-  var g7 = createGeomItem(sphereIndexed);
+  var g7 = Object.assign({}, sphereIndexed),
+    originalColor = { r: 1, g: 1, b: 1, a: 1 }, _color = originalColor;
+  g7.getDiffuseColor = () => _color;
+  this.setColor = color => { _color = color; };
+  this.resetColor = () => { _color = originalColor; };;
   transformGeom3(g7, Controls.getState(), -1.7, 1.7, -5);
   Controls.addListener(function(state) {
     transformGeom3(g7, state, -1.7, 1.7);
   });
-  Object.assign(g7, new TransformCotained({
+  Object.assign(g7, new TransformCotained3D({
     getWorldTransform: () => transform,
     getVersion: () => version
   }));
   g7.name = name + '_sphere';
-  g7.id = 12364;
+  g7.id = id;
 
   function transformGeom3(geom, state, x, y) {
     transform = new Transform3dBuilder();
@@ -189,6 +180,76 @@ function GraphicObject5(name) {
   this.getFigures = () => [g7];
 }
 
+
+
+function GraphicObject1(name, id) {
+
+  Object.assign(this, new Nameable(name));
+  Object.assign(this, new Identifiable(id));
+
+  let fbName = 'tst2';
+  var g3 = pm(figure3, -1, -1, 0/180*3.1416);
+  this.frameBufferData = {
+    name: fbName,
+    textureWidth: 800,
+    textureHeight: 600,
+    viewportName: 'back'
+  };
+  g3.diffuseTextureName = 'test2';
+  g3.id = id;
+
+  var g4 = pm(figure3, 0, -0.9),
+    g5 = pm(figure2, 0, 0, null, null, null, true),
+    g6 = pm(figure2, 0, 100, null, null, null, true),
+    originalColor = {
+      r: 1,
+      g: 0.6,
+      b: 0.9,
+      a: 1
+    }, _color = originalColor;
+  g4.diffuseTextureName = 'back';
+  g4.id = id;
+  g5.getDiffuseColor = () => _color;
+  g6.getDiffuseColor = () => _color;
+  this.setColor = color => { _color = color; };
+  this.resetColor = () => { _color = originalColor; };
+
+  var figures = [
+    pm(figure1),
+    g5,
+    g6,
+    g4,
+    g3
+  ];
+  this.getFigures = () => figures;
+
+
+  function pm(geom, dx, dy, angle, sx, sy, project) {
+    var item = Object.assign({}, geom);
+    var t = new Transform2DBuilder();
+    if (angle != null) {
+      t.rotate(angle);
+    }
+    if (dx != null || dy != null) {
+      if (dx == null) dx = 0;
+      if (dy == null) dy = 0;
+      t.move(dx, dy);
+    }
+    if (sx != null || sy != null) {
+      if (sx == null) sx = 0;
+      if (sy == null) sy = 0;
+      t.scale(sx, sy);
+    }
+    if (project) {
+      t.project(-100, -100, 600, 600);
+    }
+    Object.assign(item, new TransformCotained2D({
+      getWorldTransform: () => t,
+      getVersion: () => 0
+    }));
+    return item;
+  }
+}
 
 var figure1 = {
     primitiveType: 'TRIANGLE_STRIP',
@@ -234,14 +295,6 @@ var figure1 = {
         ],
         type: 'float'
       }
-    },
-    getDiffuseColor: function () {
-      return {
-        r: 1,
-        g: 0.6,
-        b: 0.9,
-        a: 1
-      }
     }
   },
   figure3 = {
@@ -273,31 +326,6 @@ var figure1 = {
   };
 
 
-function pm(geom, dx, dy, angle, sx, sy, project) {
-  var item = createGeomItem(geom);
-  var t = new Transform2DBuilder();
-  if (angle != null) {
-    t.rotate(angle);
-  }
-  if (dx != null || dy != null) {
-    if (dx == null) dx = 0;
-    if (dy == null) dy = 0;
-    t.move(dx, dy);
-  }
-  if (sx != null || sy != null) {
-    if (sx == null) sx = 0;
-    if (sy == null) sy = 0;
-    t.scale(sx, sy);
-  }
-  if (project) {
-    t.project(1, 1, 600, 600);
-  }
-  item.getFullProjectTransform = () => t.build();
-  return item;
-}
 
 
-function createGeomItem(figure) {
-  return Object.assign({}, figure);
-}
 

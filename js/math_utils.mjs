@@ -357,7 +357,7 @@ export const Mx3Util =  {
     return [
       2 / sizeX, 0, 0,
       0, 2 / sizeY, 0,
-      -x0, -y0, 1
+      -x0 / sizeX - 1, -y0 / sizeY-1, 1
     ];
   },
 
@@ -636,14 +636,14 @@ export const Mx4Util = {
 
 
   perspective: function(fieldOfViewInRadians, aspect, near, far) {
-    var f = Math.tan( (Math.PI - fieldOfViewInRadians) / 2 );
-    var rangeInv = 1.0 / (far - near);
+    let f = Math.tan( (Math.PI - fieldOfViewInRadians) / 2 ),
+      dz = far - near;
 
     return [
-      f / aspect, 0, 0,                           0,
-      0,          f, 0,                           0,
-      0,          0, (near + far) * rangeInv,     1,
-      0,          0, -2 * near * far * rangeInv,  0
+      f / aspect, 0, 0,                     0,
+      0,          f, 0,                     0,
+      0,          0, (near + far) / dz,     1,
+      0,          0, -2 * near * far / dz,  0
     ];
   },
 
@@ -656,7 +656,7 @@ export const Mx4Util = {
     return [
       2 * near / dx,        0,                  0,                    0,
       0,                    2 * near / dy,      0,                    0,
-      (left + right) / dx, (top + bottom) / dy, (far + near) / dz,    1,
+      -(left + right) / dx, -(top + bottom) / dy, (near + far) / dz,  1,
       0,                    0,                  -2 * near * far / dz, 0
     ];
   },
