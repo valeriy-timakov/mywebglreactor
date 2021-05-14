@@ -1,4 +1,3 @@
-
 import {Transform2DBuilder, Transform3dBuilder, Vx3Utils} from './math_utils.mjs'
 
 export function notNull(value, name) {
@@ -25,16 +24,14 @@ export function DirectionReversedHolder(direction, changeDelegate, self) {
   setRevDirection(direction);
 
   function setRevDirection(value) {
+    notNull(value, 'reversedDirection');
     reversedDirection = Vx3Utils.normalize(Vx3Utils.multiply(-1, value));
     if (changeDelegate != null) {
       changeDelegate.change(self, 'reversedDirection', reversedDirection);
     }
   }
 
-  this.setDirection = (value) => {
-    notNull(value, 'reversedDirection');
-    setRevDirection(value);
-  };
+  this.setDirection = setRevDirection;
   this.getRevDirection = () => reversedDirection;
 }
 
@@ -53,10 +50,48 @@ export function SizeHolder(size, changeDelegate, self) {
     }
   }
 
-  this.setSize = (value) => {
-    setSize(value)
-  };
+  this.setSize = setSize;
   this.getSize = () => size;
+
+}
+
+export function Size2DHolder(width, height, changeDelegate, self) {
+  if (width == null) width = 1;
+  if (height == null) height = 1;
+  setWidth(width);
+  setHeigth(height);
+
+  function setWidth(value) {
+    validate(value, 'width');
+    width = value;
+    notify(value, 'width');
+  }
+
+  function setHeigth(value) {
+    validate(value, 'height');
+    height = value;
+    notify(value, 'height');
+  }
+
+  function validate(value, name) {
+    notNull(value, name);
+    if (value <= 0) {
+      throw Error('Cannot set ' + name + ' to not positive value!');
+    }
+  }
+
+  function notify(value, name) {
+    if (changeDelegate != null) {
+      changeDelegate.change(self, 'size', size);
+    }
+  }
+
+  this.setWidth = setWidth;
+  this.getWidth = () => width;
+
+  this.setHeight = setHeigth;
+  this.getHeight = () => height;
+
 }
 
 export function PositionHolder(position, changeDelegate, self) {
@@ -74,6 +109,30 @@ export function PositionHolder(position, changeDelegate, self) {
 
 }
 
+export function Position2D(x, y) {
+
+  if (x == null) x = 0;
+  if (y == null) y = 0;
+
+  this.setX = (value) => { x = value };
+  this.getX = () => x;
+
+  this.setY = (value) => { y = value };
+  this.getY = () => y;
+
+}
+
+export function Position(x, y, z) {
+
+  Object.assign(this, new Position2D(x, y));
+
+  if (z == null) z = 0;
+
+  this.setZ = (value) => { z = value };
+  this.getZ = () => z;
+
+}
+
 const TRANSFORM_MODE_2D = {
     builder: Transform2DBuilder,
     is2d: true
@@ -84,6 +143,7 @@ const TRANSFORM_MODE_2D = {
   };
 
 
+export const TransformCotained2D = createTransformCotained(TRANSFORM_MODE_2D);
 export const TransformCotained3D = createTransformCotained(TRANSFORM_MODE_3D, function (self, transformationWrapper, state) {
 
   var worldTransformInvTransp = null;
@@ -96,7 +156,6 @@ export const TransformCotained3D = createTransformCotained(TRANSFORM_MODE_3D, fu
   };
 });
 
-export const TransformCotained2D = createTransformCotained(TRANSFORM_MODE_2D);
 
 function createTransformCotained(mode, extender) {
   const _mode = mode,
@@ -136,7 +195,7 @@ function createTransformCotained(mode, extender) {
         fullProjectionData.viewportVersion !== viewport.getVersion()
       ) {
         fullProjectionData.transform = new _mode.builder(self.getWorldTransform())
-          .multiply(viewport.getVPBuilder(_mode.is2d).build()).build()
+          .multiply(viewport.getVPBuilder(_mode.is2d).build()).build();
         fullProjectionData.viewportVersion = viewport.getVersion();
         fullProjectionData.transformVersion = transformationWrapper.getVersion();
       }

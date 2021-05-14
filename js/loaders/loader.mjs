@@ -199,8 +199,8 @@ function GraphicObject1(name, id) {
   g3.id = id;
 
   var g4 = pm(figure3, 0, -0.9),
-    g5 = pm(figure2, 0, 0, null, null, null, true),
-    g6 = pm(figure2, 0, 100, null, null, null, true),
+    g5 = pm(figure2, -300, -300, null, null, null, true),
+    g6 = pm(figure2, -300, -200, null, null, null, true),
     originalColor = {
       r: 1,
       g: 0.6,
@@ -210,12 +210,17 @@ function GraphicObject1(name, id) {
   g4.diffuseTextureName = 'back';
   g4.id = id;
   g5.getDiffuseColor = () => _color;
+  g5.id = id;
   g6.getDiffuseColor = () => _color;
+  g6.id = id;
   this.setColor = color => { _color = color; };
   this.resetColor = () => { _color = originalColor; };
 
+  let g1 = pm(figure1);
+  g1.id = id;
+
   var figures = [
-    pm(figure1),
+    g1,
     g5,
     g6,
     g4,
@@ -241,7 +246,7 @@ function GraphicObject1(name, id) {
       t.scale(sx, sy);
     }
     if (project) {
-      t.project(-100, -100, 600, 600);
+      t.project(0, 0, 600, 600);
     }
     Object.assign(item, new TransformCotained2D({
       getWorldTransform: () => t,

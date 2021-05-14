@@ -1,8 +1,9 @@
 
 import {Transform3dBuilder, Mx4Util, Vx3Utils, Mx3Util, Transform2DBuilder} from './math_utils.mjs'
-import {ChangeNotifier, Nameable} from "./utils.mjs";
+import {ChangeNotifier, Nameable, Position2D, Size2DHolder} from "./utils.mjs";
 
 import {notNull, PositionHolder, DirectionReversedHolder} from './utils.mjs'
+import {Controls} from "./controles.mjs";
 
 function Camera(position, direction, up) {
   var changeDelegate = {};
@@ -61,7 +62,14 @@ function Projection(near, far, fieldOfViewVerticalRadians) {
 
 }
 
-function Viewport(name, camera, projection, rightHandledWorld, canvas) {
+export function Clipper2D(centerX, centerY, width, height) {
+
+  Object.assign(this, new Position2D(centerX, centerY));
+  Object.assign(this, new Size2DHolder(width, height));
+
+}
+
+function Viewport(name, camera, projection, rightHandledWorld, clipper2D, canvas) {
 
   var version = 0;
 
@@ -75,11 +83,35 @@ function Viewport(name, camera, projection, rightHandledWorld, canvas) {
   projection.addChangeListener(() => { version++; });
 
 
+  if (clipper2D != null) {
+    Controls.addListener(function (state) {
+      let width = clipper2D.getWidth(), height = clipper2D.getHeight();
+      width += state.getZ() / 1000;
+      height += state.getZ() / 1000;
+      if (width > 0)  clipper2D.setWidth(width);
+      if (height > 0)  clipper2D.setHeight(height);
+      version++;
+    });
+  }
 
   this.getVPBuilder = function(is2d, pickPoint) {
 
     if (is2d === true) {
-      return new Transform2DBuilder();
+      let result;
+      if (clipper2D == null) {
+        result = new Transform2DBuilder();
+      } else {
+        result =  new Transform2DBuilder().project(clipper2D.getX(), clipper2D.getY(), clipper2D.getWidth(), clipper2D. getHeight());
+      }
+      if (pickPoint == null) {
+        return result;
+      } else {
+        const subWidth = 1 / canvas.width,
+          subHeight = 1 / canvas.height;
+        const subLeft = -1 + pickPoint.x * 2 / canvas.width;
+        const subBottom = 1 - pickPoint.y * 2 / canvas.height;
+        return result.project(subLeft - subWidth / 2, subBottom - subHeight / 2, subWidth , subHeight);
+      }
     }
 
     let result = new Transform3dBuilder();
@@ -98,37 +130,20 @@ function Viewport(name, camera, projection, rightHandledWorld, canvas) {
     }
 
     if (pickPoint != null) {
-      const top = Math.tan(projection.getFieldOfViewVerticalRadians() * 0.5) * projection.getNear();
-      const bottom = -top;
-      const left = aspect * bottom;
-      const right = aspect * top;
-      const width = Math.abs(right - left);
-      const height = Math.abs(top - bottom);
-      const pixelY = canvas.height - pickPoint.y;
-      const subLeft = left + pickPoint.x * width / canvas.width;
-      const subBottom = bottom + pixelY * height / canvas.height;
-      const subWidth = 1 / canvas.width;
-      const subHeight = 1 / canvas.height;
-
-      let persp = Mx4Util.perspective(projection.getFieldOfViewVerticalRadians(), aspect, projection.getNear(),
-        projection.getFar()),
-        frust = Mx4Util.frustum(left, right, bottom, top,
-          projection.getNear(),
-          projection.getFar()),
-      frus1 = Mx4Util.frustum(
-        subLeft,
-        subLeft + subWidth,
-        subBottom,
-        subBottom + subHeight,
-        projection.getNear(),
-        projection.getFar());
+      const subWidth = 1 / canvas.width,
+        subHeight = 1 / canvas.height,
+        bottom = -Math.tan(projection.getFieldOfViewVerticalRadians() * 0.5) * projection.getNear(),
+        left = aspect * bottom,
+        width = Math.abs(2 * left),
+        height = Math.abs(2 * bottom),
+        subLeft = left + pickPoint.x / canvas.width * width,
+        subBottom = bottom + (1 - pickPoint.y / canvas.height) * height;
 
       return  result.projectFrustum(
         subLeft,
         subLeft + subWidth,
         subBottom,
         subBottom + subHeight,
-        //left, right, bottom, top,
         projection.getNear(),
         projection.getFar());
     }

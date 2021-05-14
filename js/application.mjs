@@ -3,7 +3,7 @@
 import {WebglDriver} from './webgl_driver.mjs';
 import {Controls} from "./controles.mjs";
 import {Loader} from "./loaders/loader.mjs";
-import {Camera, Projection, Viewport} from "./viewport.mjs";
+import {Camera, Clipper2D, Projection, Viewport} from "./viewport.mjs";
 
 
 var driver,
@@ -17,12 +17,15 @@ var driver,
 function run() {
   let canvas = window.document.getElementById('c'),
     mainCamera = new Camera([0, 0, 0], [0, 0, -1], [0, 1, 0]),
+    main2DCliper = new Clipper2D(0, 0, 2, 2),
     canvasViewport = new Viewport('main', mainCamera,
-      new Projection(0.5, 200, 1.1), true, canvas);
+      new Projection(0.5, 200, 1.1), true, main2DCliper, canvas);
   driver = new WebglDriver(canvasViewport);
   currentViewportName = canvasViewport.getName();
 
   var wait = [];
+
+
 
   Loader.loadTextures().then(textures => {
     textures.forEach(texture => { driver.initTexture(texture.name, texture.image) } );

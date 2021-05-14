@@ -94,9 +94,21 @@ export function Transform3dBuilder(initialTransform) {
 
 }
 
-export function Transform2DBuilder() {
+export function Transform2DBuilder(initialTransform) {
 
-  var result = Mx3Util.IDENT;
+  var result;
+
+  if (initialTransform != null) {
+    if (initialTransform instanceof Transform2DBuilder) {
+      result = initialTransform.build();
+    } else if (initialTransform instanceof Array && initialTransform.length == 9) {
+      result = initialTransform;
+    } else {
+      throw new Error('Wrong type for 2D transform matrix! ' + initialTransform);
+    }
+  } else {
+    result = Mx3Util.IDENT;
+  }
 
   this.build = function() {
     return result;
@@ -357,7 +369,7 @@ export const Mx3Util =  {
     return [
       2 / sizeX, 0, 0,
       0, 2 / sizeY, 0,
-      -x0 / sizeX - 1, -y0 / sizeY-1, 1
+      -2 * x0 / sizeX, -2 * y0 / sizeY, 1
     ];
   },
 
