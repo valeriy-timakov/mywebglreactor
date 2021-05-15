@@ -103,7 +103,7 @@ function run() {
         .filter(graphicObject => graphicObject.frameBufferData != null)
         .forEach(graphicObject => {
           let fbData = graphicObject.frameBufferData,
-            fbViewport = new Viewport(fbData.name, new Camera([0, 0, -20], [0, 0, 1], [1, 1, 0]),
+            fbViewport = new Viewport(fbData.viewportName, new Camera([0, 0, -20], [0, 0, 1], [1, 1, 0]),
             new Projection(0.4, 1000, 2.1));
           driver.addFrameBufferViewport(fbViewport, fbData.textureWidth, fbData.textureHeight);
         });
@@ -164,7 +164,7 @@ function render() {
           driver.setCurrentScene(fbData.sceneName);
         }
         if (fbData.viewportName != null) {
-          driver.setCurrentViewport(fbData.name);
+          driver.setCurrentViewport(fbData.viewportName);
         }
         driver.render(
           graphicObjects

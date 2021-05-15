@@ -77,15 +77,21 @@ export function WebglDriver(mainViewport){
 
   createPickFrameBuffer();
 
-  this.initTexture = function (name, image) {
-    var texture = createTexture(DEFAULT_TEXTURE_INIT_MAP);
+  this.initTexture = function (name, image, initMap) {
+    if (initMap == null) {
+      initMap = DEFAULT_TEXTURE_INIT_MAP;
+    }
+    const texture = createTexture(initMap);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
     textures[name] = texture;
   };
 
-  this.addFrameBufferViewport = function(viewport, width, height) {
+  this.addFrameBufferViewport = function(viewport, width, height, initMap) {
+    if (initMap == null) {
+      initMap = DEFAULT_TEXTURE_INIT_MAP;
+    }
     self.addViewport(viewport);
-    const texture = createTexture(DEFAULT_TEXTURE_INIT_MAP),
+    const texture = createTexture(initMap),
       frameBuffer = gl.createFramebuffer();
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     textures[viewport.getName()] = texture;

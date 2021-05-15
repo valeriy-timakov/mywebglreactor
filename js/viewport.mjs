@@ -82,7 +82,7 @@ function Viewport(name, camera, projection, rightHandledWorld, clipper2D, canvas
   camera.addChangeListener(() => { version++; });
   projection.addChangeListener(() => { version++; });
 
-
+/*
   if (clipper2D != null) {
     Controls.addListener(function (state) {
       let width = clipper2D.getWidth(), height = clipper2D.getHeight();
@@ -90,10 +90,12 @@ function Viewport(name, camera, projection, rightHandledWorld, clipper2D, canvas
       height += state.getZ() / 1000;
       if (width > 0)  clipper2D.setWidth(width);
       if (height > 0)  clipper2D.setHeight(height);
+      clipper2D.setX(state.getX());
+      clipper2D.setY(state.getY());
       version++;
     });
   }
-
+*/
   this.getVPBuilder = function(is2d, pickPoint) {
 
     if (is2d === true) {

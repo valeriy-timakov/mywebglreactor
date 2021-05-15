@@ -187,15 +187,13 @@ function GraphicObject1(name, id) {
   Object.assign(this, new Nameable(name));
   Object.assign(this, new Identifiable(id));
 
-  let fbName = 'tst2';
   var g3 = pm(figure3, -1, -1, 0/180*3.1416);
   this.frameBufferData = {
-    name: fbName,
     textureWidth: 800,
     textureHeight: 600,
     viewportName: 'back'
   };
-  g3.diffuseTextureName = 'test2';
+  g3.diffuseTextureName = 'back';
   g3.id = id;
 
   var g4 = pm(figure3, 0, -0.9),
@@ -207,7 +205,7 @@ function GraphicObject1(name, id) {
       b: 0.9,
       a: 1
     }, _color = originalColor;
-  g4.diffuseTextureName = 'back';
+  g4.diffuseTextureName = 'tst';
   g4.id = id;
   g5.getDiffuseColor = () => _color;
   g5.id = id;
