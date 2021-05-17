@@ -39,7 +39,7 @@ export function getBuilder(params, scene, driver) {
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
       set: (uniformAccessor, figure) => {
-        var color = figure.getRadiance();
+        let color = figure.getRadiance();
         uniformAccessor.setUniform(ShaderVars.u_materialRadiance, [color.r, color.g, color.b]);
       }
     },
@@ -48,7 +48,7 @@ export function getBuilder(params, scene, driver) {
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
       set: (uniformAccessor, figure) => {
-        driver.bindTexture(figure.diffuseTextureName);
+        setTexture(uniformAccessor, figure.diffuseTextureName, ShaderVars.u_diffuseTexture);
       }
     },
     u_specularTexture: {
@@ -56,7 +56,7 @@ export function getBuilder(params, scene, driver) {
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
       set: (uniformAccessor, figure) => {
-        driver.bindTexture(figure.specularTextureName);
+        setTexture(uniformAccessor, figure.specularTextureName, ShaderVars.u_specularTexture);
       }
     },
     u_brillianceTexture: {
@@ -64,7 +64,7 @@ export function getBuilder(params, scene, driver) {
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
       set: (figure) => {
-        driver.bindTexture(figure.brillianceTextureName);
+        setTexture(uniformAccessor, figure.brillianceTextureName, ShaderVars.u_brillianceTexture);
 
       }
     },
@@ -73,7 +73,7 @@ export function getBuilder(params, scene, driver) {
       type: UniformTypes.sampler2D,
       kind: ShaderVarKind.uniform,
       set: (uniformAccessor, figure) => {
-        driver.bindTexture(figure.radianceTextureName);
+        setTexture(uniformAccessor, figure.radianceTextureName, ShaderVars.u_radianceTexture);
 
       }
     },
@@ -215,6 +215,11 @@ export function getBuilder(params, scene, driver) {
     linear: 1,
     power: 2
   };
+
+  function setTexture(uniformAccessor, textureName, uniform) {
+    let texPos = driver.bindTexture(textureName);
+    uniformAccessor.setUniform(uniform, texPos);
+  }
 
 
   return function () {

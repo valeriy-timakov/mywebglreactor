@@ -4,6 +4,7 @@
 import {log} from './debug_utils.mjs';
 import {FiguresPrototypesRegistry} from "./core/figure_prtotypes_regitry.mjs";
 import {getPickShaderSource, initPickProgram} from "./shaders/fs_pick.mjs";
+import {Arithmetic} from "./math_utils.mjs";
 
 export function WebglDriver(mainViewport){
 
@@ -17,7 +18,8 @@ export function WebglDriver(mainViewport){
     programs = {},
     figurePrototypesRegistry = new FiguresPrototypesRegistry(),
     figuresInited = 0,
-    prototypeReusageCount = 0;
+    prototypeReusageCount = 0,
+    lastTexturePosition = -1;
 
 
   this.addScene = (scene) => {
@@ -54,9 +56,11 @@ export function WebglDriver(mainViewport){
 
   this.getGl = () => gl;
 
-
   this.bindTexture = function(textureName) {
+    lastTexturePosition++;
+    gl.activeTexture(gl.TEXTURE0 + lastTexturePosition);
     gl.bindTexture(gl.TEXTURE_2D, textures[textureName]);
+    return lastTexturePosition;
   };
 
   this.geometriesInited = function() {
@@ -73,16 +77,21 @@ export function WebglDriver(mainViewport){
       TEXTURE_WRAP_S: 'CLAMP_TO_EDGE',
       TEXTURE_WRAP_T: 'CLAMP_TO_EDGE',
       TEXTURE_MIN_FILTER: 'LINEAR'
-    };
+    },
+    MIPMAP_FILTERS = 'NEAREST_MIPMAP_NEAREST,LINEAR_MIPMAP_NEAREST,NEAREST_MIPMAP_LINEAR,LINEAR_MIPMAP_LINEAR';
+
 
   createPickFrameBuffer();
 
   this.initTexture = function (name, image, initMap) {
-    if (initMap == null) {
+    if (initMap == null || !Arithmetic.isPowerOf2(image.width) || !Arithmetic.isPowerOf2(image.height)) {
       initMap = DEFAULT_TEXTURE_INIT_MAP;
     }
     const texture = createTexture(initMap);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    if (Object.values(initMap).filter(filter => MIPMAP_FILTERS.indexOf(filter) != -1).length > 0) {
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
     textures[name] = texture;
   };
 
@@ -344,6 +353,7 @@ export function WebglDriver(mainViewport){
           if (typeof programWrapper.setTextures == 'function') {
             programWrapper.setTextures(figure);
           }
+          lastTexturePosition = -1;
           programWrapper.fillFragmUniforms(figure, viewport);
           programWrapper.fillVertUniforms(figure, viewport);
         }

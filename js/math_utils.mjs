@@ -782,6 +782,10 @@ export const Vx3Utils = {
   },
 };
 
+export const Arithmetic = {
+  isPowerOf2: (value) =>  (value & (value - 1)) == 0
+};
+
 
 
 //-------------------------------------------------CODE GENERATION----------------------------------------------------

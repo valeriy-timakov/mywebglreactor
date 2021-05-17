@@ -207,7 +207,7 @@ function Viewport(name, camera, projection, rightHandledWorld, clipper2D, canvas
   this.getCanvas = () => canvas;
 
   function resize() {
-    var height = canvas.clientHeight * window.devicePixelRatio,
+    let height = canvas.clientHeight * window.devicePixelRatio,
       width = canvas.clientWidth * window.devicePixelRatio;
     if (canvas.width  != width || canvas.height != height) {
       canvas.width  = width;
