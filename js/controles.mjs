@@ -158,7 +158,7 @@ document.body.addEventListener('mousemove', function(e)  {
   let changed = false;
   if (down) {
     state.x += e.movementX;
-    state.y += e.movementY;
+    state.y += -e.movementY;
     changed = true;
   }
   for (let name in kineticUnits) {

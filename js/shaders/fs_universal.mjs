@@ -13,7 +13,7 @@ export function getBuilder(params, scene, driver) {
       kind: ShaderVarKind.uniform,
       set: (uniformAccessor, figure) => {
         var color = figure.getDiffuseColor();
-        uniformAccessor.setUniform(ShaderVars.u_materialDiffuseColor, [color.r, color.g, color.b, color.a]);
+        uniformAccessor.setUniform(ShaderVars.u_materialDiffuseColor, normalizeColor(figure.getDiffuseColor() ) );
       }
     },
     u_materialSpecularColor: {
@@ -22,7 +22,7 @@ export function getBuilder(params, scene, driver) {
       kind: ShaderVarKind.uniform,
       set: (uniformAccessor, figure) => {
         var color = figure.getSpecularColor();
-        uniformAccessor.setUniform(ShaderVars.u_materialSpecularColor, [color.r, color.g, color.b]);
+        uniformAccessor.setUniform(ShaderVars.u_materialSpecularColor, normalizeColor(figure.getSpecularColor() ) );
       }
     },
     u_materialBrilliance: {
@@ -39,8 +39,7 @@ export function getBuilder(params, scene, driver) {
       type: UniformTypes.vec3,
       kind: ShaderVarKind.uniform,
       set: (uniformAccessor, figure) => {
-        let color = figure.getRadiance();
-        uniformAccessor.setUniform(ShaderVars.u_materialRadiance, [color.r, color.g, color.b]);
+        uniformAccessor.setUniform(ShaderVars.u_materialRadiance, normalizeColor(figure.getRadiance() ) );
       }
     },
     u_diffuseTexture: {
@@ -219,6 +218,19 @@ export function getBuilder(params, scene, driver) {
   function setTexture(uniformAccessor, textureName, uniform) {
     let texPos = driver.bindTexture(textureName);
     uniformAccessor.setUniform(uniform, texPos);
+  }
+
+
+  function normalizeColor(color) {
+    if (!(color instanceof Array)) {
+      if (color.r == null || color.g == null || color.b == null) throw new Error("Wrong color type! " + color);
+      let tmpColor = [color.r, color.g, color.b];
+      if (color.a != null) {
+        tmpColor.push(color.a);
+      }
+      return tmpColor;
+    }
+    return color;
   }
 
 

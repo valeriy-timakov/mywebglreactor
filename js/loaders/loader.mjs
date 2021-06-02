@@ -2,13 +2,14 @@
 "use strict";
 
 import {sphere, sphereIndexed} from '../figures/sphere.mjs'
-import {cube, cubeIdexed} from '../figures/cube.mjs'
-import {Transform3dBuilder, Transform2DBuilder} from '../math_utils.mjs'
+import {cube} from '../figures/cube.mjs'
+import {Transform2DBuilder, Transform3dBuilder} from '../math_utils.mjs'
 import {Controls} from '../controles.mjs'
-import {Camera, Projection, Viewport} from '../viewport.mjs'
 import {PointLight, Scene, Spotlight} from "../scene.mjs";
 import {Identifiable, Nameable, TransformCotained2D, TransformCotained3D} from "../utils.mjs";
 import {log} from "../debug_utils.mjs";
+import {Axis} from "../figures/axis.mjs";
+import {createCone} from "../figures/figures_creator.mjs";
 
 
 const Loader = {
@@ -19,7 +20,8 @@ const Loader = {
         new GraphicObject4(4, 1.8, -2.8, 699),
         new GraphicObject4(44, 3.8, -2.8, 120),
         new GraphicObject3(3),
-        new GraphicObject5(5, 90, 249)
+        new GraphicObject5(5, 90, 249),
+        new Axis(12341, 'axis1', [0, 0, -6], [0, 1, 0], {})
       ]);
   },
   loadScenes: function() {
@@ -96,12 +98,44 @@ function GraphicObject4(name, x, y, id) {
   Object.assign(this, new Nameable(name));
   Object.assign(this, new Identifiable(id));
 
-  var g5 = Object.assign({}, cubeIdexed),
+  let cyl = createCone( 0.7, 1, 20 )
+
+
+  let ttt = {
+    primitiveType: 'TRIANGLES',
+    vertexShaderName: 'UNIVERSAL',
+    shadersParams: 'MODE=3D_WITH_LIGHT,DIFFUSE_COLORE_SOURCE=MATERIAL,SPECULAR_COLORE_SOURCE=MATERIAL,BRILLIANCE_SOURCE=MATERIAL,RADIANCE_SOURCE=MATERIAL',
+    fragmentShaderName: 'UNIVERSAL',
+    buffersData: {
+      useType: 'STATIC_DRAW',
+      indexes: {
+        data: cyl.indexes,//cubeIdexed.buffersData.indexes.data,//
+        type: 'u_byte'
+      },
+      positions: {
+        data: cyl.vertices,//cubeIdexed.buffersData.positions.data,//
+        type: 'float'
+      },
+      normals: {
+        data:  cyl.normals,//cubeIdexed.buffersData.normals.data,//
+        type: 'float'
+      }
+    },
+    cullFace: 'CCW',
+    depthTestEnabled: true,
+    getSpecularColor: () => { return {r: 1, g: 1, b: 0} },
+    getDiffuseColor: () => {  return { r: 0, g: 0, b: 1, a: 1 } },
+    getRadiance: () =>  { return {r: 0, g: 0, b: 0} },
+    getBrilliance: () => 3
+  };
+
+
+  var g5 = Object.assign({}, ttt),
     originalColor =  { r: 0, g: 0, b: 1, a: 1 } , _color = originalColor;
   g5.getDiffuseColor = () => _color;
   this.setColor = color => { _color = color; };
   this.resetColor = () => { _color = originalColor; };
-  transformGeom2(g5, Controls.getState(), x, y, -7);
+  transformGeom2(g5, Controls.getState(), x, y, -9);
   Controls.addListener(function(state) {
     transformGeom2(g5, state, x, y, -7);
   });

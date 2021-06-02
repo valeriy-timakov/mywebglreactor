@@ -156,8 +156,8 @@ export function createCone(radius, height, n) {
   const top = [0, 0, height],
     bottom = [0, 0, 0],
     bottomNormal = [0, 0, -1];
-  vertices.push(bottom);
-  normals.push(bottomNormal);
+  vertices = vertices.concat(bottom);
+  normals = normals.concat(bottomNormal);
   let prevNormal = null,
     firstNormal;
   for (let i = 0; i < n; i++) {
@@ -168,20 +168,20 @@ export function createCone(radius, height, n) {
       point = [radius * sin, radius * cos, 0],
       normal = Vx3Utils.normalize( [ height * sin / sideLen, height  * cos / sideLen, radius / sideLen ] );
     if (prevNormal != null) {
-      normals.push(Vx3Utils.normalize( Vx3Utils.add(prevNormal, normal) ));
+      normals = normals.concat(Vx3Utils.normalize( Vx3Utils.add(prevNormal, normal) ));
     }
 
     //circle
-    vertices.push(point);
-    normals.push(bottomNormal);
+    vertices = vertices.concat(point);
+    normals = normals.concat(bottomNormal);
     let lineNum = i != n - 1 ? i : -1;
     indexes.push(1 + 3 * i);//0
     indexes.push(0);
     indexes.push(4 + 3 * lineNum);//0+3=3
     //cone side
-    vertices.push(point);
-    normals.push(normal);
-    vertices.push(top);
+    vertices = vertices.concat(point);
+    normals = normals.concat(normal);
+    vertices = vertices.concat(top);
     indexes.push(2 + 3 * i);//1
     indexes.push(5 + 3 * lineNum);//1+3=4
     indexes.push(3 + 3 * i);//2
@@ -191,7 +191,7 @@ export function createCone(radius, height, n) {
       firstNormal = normal;
     }
   }
-  normals.push(Vx3Utils.normalize( Vx3Utils.add(prevNormal, firstNormal) ));
+  normals = normals.concat(Vx3Utils.normalize( Vx3Utils.add(prevNormal, firstNormal) ));
   return {
     indexes: indexes,
     vertices:vertices,
@@ -209,10 +209,10 @@ export function createCylinder(radius, height, n) {
      indexes = [],
      firstNormal = [1, 0, 0],
      prevNormal = firstNormal;
-  vertices.push(top);
-  normals.push(topNormal);
-  vertices.push(bottom);
-  normals.push(bottomNormal);
+  vertices = vertices.concat(top);
+  normals = normals.concat(topNormal);
+  vertices = vertices.concat(bottom);
+  normals = normals.concat(bottomNormal);
   for (let i = 0; i < n; i++) {
     let angle = i * 2 * Math.PI / n,
       cos = Math.cos(angle),
@@ -225,16 +225,16 @@ export function createCylinder(radius, height, n) {
 
     let lineNum = i != n - 1 ? i : -1;
     //top circle
-    vertices.push(currentVertTop);
-    normals.push(topNormal);
+    vertices = vertices.concat(currentVertTop);
+    normals = normals.concat(topNormal);
     indexes.push(0);
     indexes.push(2 + i * 4);//0
     indexes.push(6 + lineNum * 4);//0+4=4
     //side surface
-    vertices.push(currentVertTop);
-    normals.push(normal);
-    vertices.push(currentVertBottom);
-    normals.push(normal);
+    vertices = vertices.concat(currentVertTop);
+    normals = normals.concat(normal);
+    vertices = vertices.concat(currentVertBottom);
+    normals = normals.concat(normal);
     indexes.push(3 + i * 4);//1
     indexes.push(4 + i * 4);//2
     indexes.push(7 + lineNum * 4);//1+4=5
@@ -242,8 +242,8 @@ export function createCylinder(radius, height, n) {
     indexes.push(4 + i * 4);//2
     indexes.push(8 + lineNum * 4);//2+4=6
     //bottom circle
-    vertices.push(currentVertBottom);
-    normals.push(bottomNormal);
+    vertices = vertices.concat(currentVertBottom);
+    normals = normals.concat(bottomNormal);
     indexes.push(1);
     indexes.push(9 + lineNum * 4);//3+4=7
     indexes.push(5 + i * 4);//3

@@ -1,3 +1,4 @@
+import {log} from "./debug_utils.mjs";
 
 
 export function Transform3dBuilder(initialTransform) {
@@ -24,9 +25,9 @@ export function Transform3dBuilder(initialTransform) {
 
   this.move = function(dx, dy, dz) {
     if (dx instanceof Array && dy == null && dz == null) {
-      dx = dx[0];
       dy = dx[1];
       dz = dx[2];
+      dx = dx[0];
     }
     result = Mx4Util.multiply(result, Mx4Util.translation(dx, dy, dz));
     return self;
@@ -38,6 +39,9 @@ export function Transform3dBuilder(initialTransform) {
   };
 
   this.multiply= function(m) {
+    if (m instanceof Transform3dBuilder) {
+      m = m.build();
+    }
     result = Mx4Util.multiply(result, m);
     return self;
   };
@@ -89,6 +93,21 @@ export function Transform3dBuilder(initialTransform) {
 
   this.orientByDirection = function (direction) {
     result = Mx4Util.multiply(result, Mx4Util.orientByDirection( direction ));
+    return self;
+  }
+
+  this.orientByDirectionFromX = function (direction) {
+    result = Mx4Util.multiply(result, Mx4Util.orientByDirectionFromX( direction ));
+    return self;
+  }
+
+  this.orientByDirectionFromZ = function (direction) {
+    result = Mx4Util.multiply(result, Mx4Util.orientByDirectionFromZ( direction ));
+    return self;
+  }
+
+  this.orientByDirectionFromY = function (direction) {
+    result = Mx4Util.multiply(result, Mx4Util.orientByDirectionFromY( direction ));
     return self;
   }
 
@@ -625,17 +644,36 @@ export const Mx4Util = {
     ];
   },
 
-  orientByDirection: function(direction) {
-    let sb = direction[1],
-      cb = Math.sqrt(1 + sb * sb),
-      sa = direction[2] / cb,
-      ca = direction[0] / cb;
-    return this.inverse([
-      cb,       0,  sb,
-      sa * sb,  ca, -sa * cb,
-      -ca * sb, sa, ca * cb
-    ]);
+  orientByDirectionFromX: function(direction) {
+    let [sa, ca, sb, cb] = getDirectionXAngles(direction);
+    return [
+      ca * cb,  sa,  ca * sb,   0,
+      -sa * cb, ca,   -sa * sb, 0,
+      -sb,      0,    cb,       0,
+      0,        0,    0,        1
+    ];
   },
+
+  orientByDirectionFromY: function(direction) {
+    let [sa, ca, sb, cb] = getDirectionXAngles(direction);
+    return [
+      sa * cb,  -ca,  sa * sb,  0,
+      ca * cb,  sa,   ca * sb,  0,
+      -sb,      0,    cb,       0,
+      0,        0,    0,        1
+    ];
+  },
+
+  orientByDirectionFromZ: function(direction) {
+    let [sa, ca, sb, cb] = getDirectionXAngles(direction);
+    return [
+      sb,       0,    -cb,      0,
+      -sa * cb,  ca,   -sa * sb,  0,
+      ca * cb,  sa,  ca * sb,  0,
+      0,        0,    0,        1
+    ];
+  },
+
 
   orthographic: function(left, right, bottom, top, near, far) {
     return [
@@ -674,7 +712,7 @@ export const Mx4Util = {
   },
 
   lookTo: function(location, direction, up) {
-    var vz = Vx3Utils.normalize(direction),
+    let vz = Vx3Utils.normalize(direction),
       vx = Vx3Utils.normalize(Vx3Utils.crossProduct(up, vz)),
       vy = Vx3Utils.normalize(Vx3Utils.crossProduct(vz, vx));
 
@@ -686,6 +724,31 @@ export const Mx4Util = {
     ];
   }
 };
+
+function getDirectionXAngles(direction) {
+  let x = direction[0],
+    y = direction[1],
+    z = direction[2],
+    len = Math.sqrt(x * x + y * y + z * z),
+    lenXZ = Math.sqrt(x * x + z * z),
+    ca = lenXZ / len,
+    sa = y / len,
+    cb,
+    sb;
+  log('v_rx', x);
+  log('v_ry', y);
+  log('v_rz', z);
+
+    if (lenXZ == 0) {
+      cb = 1;
+      sb = 0;
+    } else {
+      cb = x / lenXZ;
+      sb = z / lenXZ;
+    }
+
+    return [sa, ca, sb, cb];
+}
 
 export const Vx3Utils = {
   normalize: function(v) {
